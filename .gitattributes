@@ -1,0 +1,9 @@
+# Переводы строк всегда LF: gofmt и bash-скрипты (tools/*.sh) с CRLF ломаются.
+* text=auto eol=lf
+
+*.dll binary
+*.exe binary
+*.ico binary
+*.png binary
+*.gz binary
+*.woff2 binary

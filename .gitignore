@@ -1,0 +1,12 @@
+# Сборка — exe собирается из исходников (wails build)
+build/bin/
+
+# Готовые релизы выкладываются на GitHub Releases, не в репозиторий
+release/
+
+# Мусор
+*.exe~
+*.old
+*.tmp
+.vscode/
+.idea/

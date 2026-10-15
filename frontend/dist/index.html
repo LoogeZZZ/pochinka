@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Починка</title>
+  <script>
+    // Тема до первой отрисовки — без вспышки другого цвета.
+    try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="titlebar">
+    <span class="title">Починка</span>
+    <div class="tb-actions">
+      <button class="tb-btn" id="btnSettings" title="Настройки">
+        <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button class="tb-btn" id="btnMin" title="Свернуть"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+      <button class="tb-btn close" id="btnClose" title="Скрыть в трей"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
+    </div>
+  </div>
+
+  <div class="note" id="adminNote" hidden>Нужны права администратора — перезапустите программу от имени администратора.</div>
+  <div class="note warn" id="conflictNote" hidden></div>
+
+  <!-- ================= Главный экран ================= -->
+  <section class="view" id="viewMain">
+    <div class="hero">
+      <button class="toggle" id="toggle" data-status="stopped" aria-label="Подключить">
+        <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M7.6 7a7 7 0 1 0 8.8 0M12 3.8v7.4"/></svg>
+      </button>
+      <div class="state" id="stateTitle">Отключено</div>
+      <div class="sub" id="stateSub">Нажмите, чтобы подключиться</div>
+    </div>
+
+    <div class="modules">
+      <div class="module" id="modZapret">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.2 7 9.5 4-1.3 7-5 7-9.5V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <span class="m-text"><b>Обход блокировок</b><small id="zapretSub">Discord, YouTube, игры</small></span>
+        <span class="switch"><input type="checkbox" id="swZapret"><i></i></span>
+      </div>
+      <div class="module link" id="modVpn">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+        <span class="m-text"><b>VPN</b><small id="vpnSub">Добавить подписку</small></span>
+        <span class="switch" id="swVpnWrap"><input type="checkbox" id="swVpn"><i></i></span>
+        <svg class="chev" id="vpnChev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg>
+      </div>
+      <div class="module link" id="modTg">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><path d="m21 4-18 7.5 6 2 2 6.5 3.5-4.5 5 3.5L21 4Z"/><path d="m9 13.5 8-6.5"/></svg></span>
+        <span class="m-text"><b>Telegram</b><small id="tgSub">Прокси для Telegram Desktop</small></span>
+        <span class="switch"><input type="checkbox" id="swTg"><i></i></span>
+        <svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VPN ================= -->
+  <section class="view" id="viewVpn" hidden>
+    <div class="vhead">
+      <button class="back" data-back="return"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>VPN</span>
+      <button class="icon-btn right" id="subRefresh" title="Обновить подписку" hidden>
+        <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5M4 4v3h3M4 13a8 8 0 0 0 14.5 4.5M20 20v-3h-3"/></svg>
+      </button>
+    </div>
+    <div class="scroll">
+      <!-- Переключатель подписок -->
+      <div class="subtabs" id="subTabs" hidden></div>
+
+      <!-- Добавление подписки -->
+      <div id="subEmpty" hidden>
+        <div class="card add">
+          <div class="add-title">Добавьте подписку</div>
+          <p class="hint">Ссылка из бота или личного кабинета. Подходят Remnawave, Marzban, 3x-ui, а также ссылки vless://, vmess://, trojan://, ss://, hysteria2://</p>
+          <textarea id="subInput" rows="3" spellcheck="false" placeholder="https://…"></textarea>
+          <div class="add-actions">
+            <button class="btn ghost-btn" id="subCancel" hidden>Отмена</button>
+            <button class="btn ghost-btn" id="subPaste">Вставить</button>
+            <button class="btn primary" id="subAdd">Добавить</button>
+          </div>
+          <div class="err" id="subErr"></div>
+        </div>
+        <p class="hint center">Через VPN пойдут только заблокированные сайты. Яндекс, банки и Госуслуги — как обычно, напрямую.</p>
+      </div>
+
+      <!-- Есть подписка -->
+      <div id="subFull" hidden>
+        <div class="card sub-card">
+          <div class="sub-top">
+            <div>
+              <div class="sub-title" id="subTitle"></div>
+              <div class="sub-host" id="subHost"></div>
+            </div>
+            <span class="pill" id="vpnPill"></span>
+          </div>
+          <div class="traffic" id="trafficBox">
+            <div class="bar"><i id="trafficBar"></i></div>
+            <div class="traffic-row"><span id="trafficText"></span><span id="expireText"></span></div>
+          </div>
+          <div class="vcheck" id="vpnCheck" hidden><span id="vpnCheckText"></span><button class="link" id="vpnCheckBtn">Проверить ещё раз</button></div>
+          <div class="announce" id="announce" hidden></div>
+          <div class="sub-links">
+            <button class="link" id="subSupport" hidden>Поддержка</button>
+            <button class="link" id="subWeb" hidden>Личный кабинет</button>
+            <button class="link danger" id="subRemove">Удалить</button>
+          </div>
+        </div>
+
+        <div class="group-title">Режим</div>
+        <div class="segmented two" id="vpnMode">
+          <button data-v="proxy">Системный прокси</button>
+          <button data-v="tun">TUN — все программы</button>
+        </div>
+        <p class="hint" id="modeHint"></p>
+
+        <div class="group-title row-title"><span>Серверы</span><button class="link" id="pingBtn">Проверить пинг</button></div>
+        <ul class="list servers" id="servers"></ul>
+
+        <div class="group-title">Через VPN</div>
+        <div class="segmented two" id="vpnRoute">
+          <button data-v="blocked">Только заблокированное</button>
+          <button data-v="all">Всё, кроме российского</button>
+        </div>
+        <p class="hint" id="routeHint" style="margin-top:8px"></p>
+        <div class="list">
+          <button class="item" id="vpnSites"><span class="two">Свои сайты через VPN<small>всё остальное — по базе блокировок</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Telegram ================= -->
+  <section class="view" id="viewTg" hidden>
+    <div class="vhead">
+      <button class="back" data-back="return"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>Прокси для Telegram</span>
+    </div>
+    <div class="scroll">
+      <div class="card tg-card">
+        <div class="sub-top">
+          <div>
+            <div class="sub-title">Telegram Desktop</div>
+            <div class="sub-host" id="tgAddr">127.0.0.1</div>
+          </div>
+          <span class="pill" id="tgPill"></span>
+        </div>
+        <p class="hint" style="margin:0">Telegram Desktop пойдёт через WebSocket — тем же путём, что и web.telegram.org. Работает без VPN и не трогает остальной трафик.</p>
+        <button class="btn primary wide" id="tgConnect">Подключить Telegram</button>
+        <div class="err" id="tgErr"></div>
+        <p class="hint" style="margin:0" id="tgHint">Telegram спросит «Подключить прокси?» — нажмите «Подключить».</p>
+      </div>
+
+      <div class="group-title">Статистика</div>
+      <ul class="list services">
+        <li><span>Соединений сейчас</span><span class="plain" id="tgActive">—</span></li>
+        <li><span>Через WebSocket / Cloudflare / TCP</span><span class="plain" id="tgPaths">—</span></li>
+        <li><span>Трафик ↑ / ↓</span><span class="plain" id="tgTraffic">—</span></li>
+      </ul>
+
+      <div class="group-title">Прочее</div>
+      <div class="list">
+        <button class="item" id="tgCopy"><span class="two">Скопировать ссылку прокси<small>для ручной настройки в Telegram на этом компьютере</small></span><span class="muted" id="tgCopyLabel"></span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Обход блокировок (zapret) ================= -->
+  <section class="view" id="viewZapret" hidden>
+    <div class="vhead">
+      <button class="back" data-back="return"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>Обход блокировок</span>
+    </div>
+    <div class="scroll">
+      <div class="group-title">Проверка</div>
+      <ul class="list services">
+        <li data-key="discord"><span>Discord</span><span class="val">—</span></li>
+        <li data-key="youtube"><span>YouTube</span><span class="val">—</span></li>
+      </ul>
+      <button class="ghost" id="recheck">Проверить снова</button>
+
+      <div class="group-title">Стратегия</div>
+      <p class="hint">Если сервис не открывается — выберите другую. Применяется сразу.</p>
+      <ul class="list" id="strategies"></ul>
+
+      <div class="group-title">Игры</div>
+      <div class="list" id="games"></div>
+      <p class="hint" style="margin-top:12px">Порты для игр — включайте, если игра всё равно не подключается.</p>
+      <div class="segmented" id="gameFilter">
+        <button data-v="disabled">Выкл</button>
+        <button data-v="all">TCP+UDP</button>
+        <button data-v="tcp">TCP</button>
+        <button data-v="udp">UDP</button>
+      </div>
+
+      <div class="group-title">Обновления</div>
+      <div class="list">
+        <label class="item">
+          <span>Обновлять zapret автоматически</span>
+          <span class="switch"><input type="checkbox" id="autoUpdate"><i></i></span>
+        </label>
+        <button class="item" id="checkUpd">
+          <span>zapret <span class="muted" id="zver">—</span></span>
+          <span class="muted" id="checkUpdLabel">Проверить</span>
+        </button>
+      </div>
+
+      <div class="group-title">Прочее</div>
+      <div class="list">
+        <button class="item" id="userLists"><span class="two">Свои домены для обхода<small>откроется список в Блокноте</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Настройки (шестерёнка) ================= -->
+  <section class="view" id="viewSettings" hidden>
+    <div class="vhead">
+      <button class="back" data-back="viewMain"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>Настройки</span>
+    </div>
+    <div class="scroll">
+      <div class="group-title">Разделы</div>
+      <div class="list">
+        <button class="item" data-section="viewZapret"><span class="two">Обход блокировок<small id="navZapret"></small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" data-section="viewVpn"><span class="two">VPN<small id="navVpn"></small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" data-section="viewTg"><span class="two">Прокси для Telegram<small id="navTg"></small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+      </div>
+
+      <div class="group-title">Приложение</div>
+      <div class="list">
+        <label class="item">
+          <span class="two">Запускать вместе с Windows<small>сразу в трей, без окна</small></span>
+          <span class="switch"><input type="checkbox" id="autostart"><i></i></span>
+        </label>
+      </div>
+
+      <div class="group-title">Тема</div>
+      <div class="segmented three" id="theme">
+        <button data-v="system">Как в системе</button>
+        <button data-v="light">Светлая</button>
+        <button data-v="dark">Тёмная</button>
+      </div>
+
+      <div class="group-title">Язык</div>
+      <div class="segmented two" id="lang">
+        <button data-v="ru">Русский</button>
+        <button data-v="en">English</button>
+      </div>
+
+      <div class="group-title">Прочее</div>
+      <div class="list">
+        <button class="item" id="licenses"><span>Лицензии</span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" data-open="viewLog"><span>Журнал</span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" id="quit"><span class="danger">Выйти из программы</span></button>
+      </div>
+      <p class="hint center" id="appVer"></p>
+    </div>
+  </section>
+
+  <!-- ================= Журнал ================= -->
+  <section class="view" id="viewLog" hidden>
+    <div class="vhead">
+      <button class="back" data-back="viewSettings"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>Журнал</span>
+      <button class="ghost right" id="openData">Папка</button>
+    </div>
+    <pre class="log" id="log"></pre>
+  </section>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
