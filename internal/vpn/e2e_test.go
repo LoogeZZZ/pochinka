@@ -177,13 +177,13 @@ func TestRoutingAllExceptRU(t *testing.T) {
 		t.Fatal(err)
 	}
 	startXray(t, client)
-	for _, h := range []string{"example.com", "maxvpn.work", "instagram.com", "ya.ru", "gosuslugi.ru", "vk.com", "sberbank.ru"} {
+	for _, h := range []string{"youtube.com", "discord.com", "instagram.com", "ya.ru", "gosuslugi.ru", "vk.com", "sberbank.ru"} {
 		connect(t, "127.0.0.1:39030", h+":443")
 	}
 	time.Sleep(500 * time.Millisecond)
 	log := seen()
 	t.Logf("через VPN:\n%s", log)
-	for _, h := range []string{"example.com", "maxvpn.work", "instagram.com"} {
+	for _, h := range []string{"youtube.com", "discord.com", "instagram.com"} {
 		if !strings.Contains(log, h+":443") {
 			t.Errorf("%s должен идти через VPN", h)
 		}
