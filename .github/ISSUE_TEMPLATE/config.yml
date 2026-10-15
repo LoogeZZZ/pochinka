@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Уязвимость
+    url: https://github.com/LoogeZZZ/pochinka/security/advisories/new
+    about: Сообщить приватно, не публикуя
+  - name: Проблемы zapret (стратегии, WinDivert)
+    url: https://github.com/Flowseal/zapret-discord-youtube/issues
+    about: Если та же проблема есть и в оригинальном zapret-discord-youtube

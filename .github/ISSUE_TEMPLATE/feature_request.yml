@@ -1,0 +1,22 @@
+name: Идея или предложение
+description: Новая функция, игра в списки, рабочая стратегия
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему это решает
+      description: Что сейчас неудобно или не работает
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Что предлагаете
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Подробности
+      description: Для игр — домены или IP; для стратегий — провайдер, регион и какая стратегия заработала

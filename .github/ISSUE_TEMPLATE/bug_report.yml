@@ -1,0 +1,60 @@
+name: Что-то не работает
+description: Ошибка, падение, не открывается сервис
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Не вставляйте** ссылки на подписки, `vless://`-ключи и токены. Уязвимости — не сюда, а через [Security](https://github.com/LoogeZZZ/pochinka/security/advisories/new).
+  - type: dropdown
+    id: part
+    attributes:
+      label: Что не работает
+      options:
+        - Обход блокировок (Discord, YouTube, игры)
+        - VPN
+        - Прокси для Telegram
+        - Установка, запуск, автозапуск
+        - Интерфейс
+        - Другое
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось
+      description: Что делали, что ожидали, что получилось. Скриншот очень помогает.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия Починки
+      description: Настройки, внизу экрана
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: input
+    id: isp
+    attributes:
+      label: Провайдер и регион
+      description: Блокировки у всех разные
+      placeholder: "МТС, мобильный, Нижний Новгород"
+  - type: textarea
+    id: setup
+    attributes:
+      label: Что было включено
+      description: Стратегия обхода, режим VPN (прокси или TUN), маршрут, другие VPN и антивирусы
+  - type: textarea
+    id: log
+    attributes:
+      label: Журнал
+      description: Настройки → Журнал, последние строки. Секреты из журнала вырезаются, но просмотрите его перед отправкой.
+      render: text
