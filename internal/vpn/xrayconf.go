@@ -3,6 +3,7 @@ package vpn
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 )
 
 type Mode string
@@ -13,6 +14,29 @@ const (
 )
 
 const TunName = "Pochinka"
+
+// tunNames — имена адаптера по порядку. Запасное нужно, когда прошлый
+// адаптер ещё удаляется Windows (бывает минутами после перезапуска): новый с
+// тем же именем и GUID в это время не создаётся («cannot find the file»).
+var tunNames = []string{TunName, TunName + " 2"}
+
+var (
+	tunMu  sync.Mutex
+	tunCur = TunName
+)
+
+// curTun — имя адаптера текущего (или последнего) подключения.
+func curTun() string {
+	tunMu.Lock()
+	defer tunMu.Unlock()
+	return tunCur
+}
+
+func setCurTun(n string) {
+	tunMu.Lock()
+	tunCur = n
+	tunMu.Unlock()
+}
 
 // BuildOptions — всё, что нужно для конфига xray.
 type BuildOptions struct {
@@ -34,6 +58,15 @@ type BuildOptions struct {
 	// блокировок). ТСПУ «замедляет» зарубежные хостинги (DigitalOcean,
 	// Hetzner…) без всяких списков — в этом режиме они идут через VPN.
 	RouteAll bool
+	// TunName — имя адаптера (пусто — основное).
+	TunName string
+}
+
+func (o BuildOptions) tunName() string {
+	if o.TunName != "" {
+		return o.TunName
+	}
+	return TunName
 }
 
 // ruDirect — что в режиме «всё, кроме российского» всё равно идёт напрямую:
@@ -220,7 +253,7 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 	if o.Mode == ModeTUN {
 		inbounds = append(inbounds, map[string]any{
 			"tag": "tun-in", "protocol": "tun", "port": 0,
-			"settings": map[string]any{"name": TunName, "mtu": 1500},
+			"settings": map[string]any{"name": o.tunName(), "mtu": 1500},
 			// routeOnly=true: домен из SNI нужен только для выбора маршрута,
 			// соединение идёт на исходный IP. С false xray иногда вытаскивал
 			// из Chrome домен с точкой в начале (".www.google.com") и падал на

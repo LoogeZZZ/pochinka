@@ -57,6 +57,8 @@ type State struct {
 	Active  string `json:"active"` // какой сервер реально используется
 	Check   string `json:"check"`  // результат самопроверки
 	CheckOK bool   `json:"checkOk"`
+
+	HWID string `json:"hwid"` // что уходит панели в x-hwid
 }
 
 // cachedServer — сервер на диске (вместе с outbound).
@@ -168,6 +170,7 @@ func (m *Manager) State() State {
 	defer m.mu.Unlock()
 	s := m.state
 	s.ActiveSub = m.active
+	s.HWID = Device().HWID
 	s.Subs = make([]SubView, len(m.subs))
 	for i, sub := range m.subs {
 		s.Subs[i] = SubView{ID: sub.ID, Title: sub.title(), Host: subHost(sub.URL), Info: sub.Info,
@@ -623,13 +626,30 @@ func (m *Manager) startLocked(ctx context.Context) error {
 			return fmt.Errorf("wintun.dll: %w", err)
 		}
 	}
-	js, err := BuildConfig(opts)
-	if err != nil {
-		return err
+	// В TUN — по очереди основное и запасное имя адаптера: прошлый адаптер
+	// Windows иногда удаляет минутами, и с его именем новый не создаётся.
+	names := []string{""}
+	if mode == ModeTUN {
+		names = tunNames
 	}
-	_ = os.WriteFile(filepath.Join(paths.LogsDir(), "xray-config.json"), redactConfig(js), 0o600)
-	if err := m.eng.start(js); err != nil {
-		return err
+	for i, name := range names {
+		opts.TunName = name
+		js, err := BuildConfig(opts)
+		if err != nil {
+			return err
+		}
+		_ = os.WriteFile(filepath.Join(paths.LogsDir(), "xray-config.json"), redactConfig(js), 0o600)
+		err = m.eng.start(js)
+		if err == nil {
+			if mode == ModeTUN {
+				setCurTun(name)
+			}
+			break
+		}
+		if i == len(names)-1 || ctx.Err() != nil {
+			return err
+		}
+		applog.Printf("vpn: адаптер «%s» не создаётся (%v) — пробую «%s»", name, err, names[i+1])
 	}
 	// Пока поднимали ядро, могли нажать «Выключить» или закрыть приложение —
 	// тогда системный прокси и маршруты не трогаем.
@@ -639,7 +659,7 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	}
 
 	if mode == ModeTUN {
-		if err := setupTunRoutes(); err != nil {
+		if err := setupTunRoutes(curTun()); err != nil {
 			m.eng.stop()
 			return err
 		}
@@ -707,7 +727,9 @@ func (m *Manager) stopLocked(stayTun bool) {
 	if wasTun {
 		// Адаптер удаляется асинхронно; новый старт до этого получил бы
 		// «initialization already completed».
-		waitTunGone(3 * time.Second)
+		if name := curTun(); !waitTunGone(name, 10*time.Second) {
+			applog.Printf("vpn: адаптер «%s» ещё удаляется Windows", name)
+		}
 	}
 	if wasTun && !stayTun && m.onTun != nil {
 		m.onTun(0)

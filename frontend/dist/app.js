@@ -48,6 +48,9 @@ function render(s) {
   S = s;
   const z = s.zapret, v = s.vpn;
   $("adminNote").hidden = s.admin;
+  const up = s.update || {};
+  $("updateNote").hidden = !up.version;
+  $("updateText").textContent = up.version ? t("Доступна версия {x}", up.version) : "";
   $("conflictNote").hidden = !s.conflict;
   $("conflictNote").textContent = s.conflict
     ? t("Работает другой VPN — «{x}». Выключите его: два VPN мешают друг другу, и сайты не грузятся.", s.conflict)
@@ -192,6 +195,12 @@ function renderSubTabs(v) {
 
 function renderVpnView(s) {
   const v = s.vpn;
+  // HWID — до раннего выхода: переключатель нужен и без подписки.
+  const hw = !s.config.vpnNoHwid;
+  $("sendHwid").checked = hw;
+  $("hwidHint").textContent = hw
+    ? t("HWID этого компьютера: {x}", v.hwid || "—")
+    : t("Панель не узнает это устройство. Подписка с лимитом устройств может не загрузиться.");
   if (!v.hasSub) addMode = false;
   renderSubTabs(v);
   $("subEmpty").hidden = v.hasSub && !addMode;
@@ -481,6 +490,11 @@ $("pingBtn").addEventListener("click", async () => {
   b.textContent = t("Проверить пинг");
 });
 $("vpnSites").addEventListener("click", () => api().OpenVPNSites());
+$("sendHwid").addEventListener("change", (e) => guarded(async () => {
+  const r = await api().SetSendHWID(e.target.checked);
+  if (r) alert(r);
+}));
+$("updateBtn").addEventListener("click", () => api().OpenAppUpdate());
 $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
 
 // обход

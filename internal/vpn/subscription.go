@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/xtls/xray-core/infra/conf/serial"
+
+	"pochinka/internal/config"
 )
 
 // SubInfo — сведения о подписке из заголовков ответа панели.
@@ -50,6 +52,14 @@ func FetchSubscription(ctx context.Context, subURL string) ([]*Server, SubInfo, 
 	}
 	req.Header.Set("User-Agent", "v2rayN/7.15.4")
 	req.Header.Set("Accept", "*/*")
+	sendHWID := !config.Load().VPNNoHWID
+	if sendHWID {
+		d := Device()
+		req.Header.Set("x-hwid", d.HWID)
+		req.Header.Set("x-device-os", d.OS)
+		req.Header.Set("x-ver-os", d.OSVersion)
+		req.Header.Set("x-device-model", d.Model)
+	}
 	c := &http.Client{Timeout: 25 * time.Second}
 	resp, err := c.Do(req)
 	if err != nil {
@@ -62,6 +72,14 @@ func FetchSubscription(ctx context.Context, subURL string) ([]*Server, SubInfo, 
 		return nil, info, fmt.Errorf("подписка недоступна (%s): %v", subHost(subURL), err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == 404 {
+		// Remnawave с лимитом устройств отвечает 404 и без HWID, и когда
+		// лимит исчерпан.
+		if !sendHWID {
+			return nil, info, errors.New("подписка: HTTP 404 — возможно, панель требует HWID: включите «Отправлять HWID устройства»")
+		}
+		return nil, info, errors.New("подписка: HTTP 404 — ссылка устарела или закончился лимит устройств (удалите старое устройство в личном кабинете)")
+	}
 	if resp.StatusCode != 200 {
 		return nil, info, fmt.Errorf("подписка: HTTP %d", resp.StatusCode)
 	}

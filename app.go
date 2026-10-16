@@ -37,6 +37,7 @@ type App struct {
 	quitting  bool
 	conflict  string             // чужой VPN, который перехватывает интернет (Happ, v2rayN…)
 	autostart bool               // есть задача автозапуска
+	appUpdate AppUpdate          // новая версия Починки на GitHub
 	onCancel  context.CancelFunc // отмена идущего включения обхода/VPN
 
 	modeMu sync.Mutex // переключение режимов обход ⇄ VPN
@@ -46,7 +47,7 @@ type App struct {
 }
 
 // appVersion — версия программы (совпадает с productVersion в wails.json).
-const appVersion = "1.0.0"
+const appVersion = "1.0.1"
 
 type UIState struct {
 	Zapret    zapret.State             `json:"zapret"`
@@ -60,6 +61,7 @@ type UIState struct {
 	TG        TGState                  `json:"tg"`
 	Autostart bool                     `json:"autostart"`
 	Version   string                   `json:"version"`
+	Update    AppUpdate                `json:"update"`
 }
 
 func NewApp() *App {
@@ -104,6 +106,7 @@ func (a *App) startup(ctx context.Context) {
 	a.tray = startTray(a)
 	go a.vpn.Loop(a.ctx)
 	go a.watchConflicts()
+	go a.watchAppUpdates()
 
 	if !winutil.IsAdmin() {
 		applog.Printf("ВНИМАНИЕ: приложение запущено без прав администратора — zapret не сможет работать")
@@ -241,12 +244,13 @@ func (a *App) GetState() UIState {
 	for k, v := range a.checks {
 		checks[k] = v
 	}
-	checking, conflict, autostart := a.checking, a.conflict, a.autostart
+	checking, conflict, autostart, upd := a.checking, a.conflict, a.autostart, a.appUpdate
 	a.mu.Unlock()
 	st := UIState{
 		Conflict:  conflict,
 		Autostart: autostart,
 		Version:   appVersion,
+		Update:    upd,
 		Checks:    checks,
 		Checking:  checking,
 		Admin:     winutil.IsAdmin(),
@@ -552,6 +556,17 @@ func (a *App) RefreshSubscription() string {
 		return err.Error()
 	}
 	return ""
+}
+
+// SetSendHWID — отправлять ли HWID устройства панели. Подписку сразу
+// перечитываем: после включения панель с лимитом устройств её отдаст.
+func (a *App) SetSendHWID(on bool) string {
+	_, _ = config.Update(func(c *config.Config) { c.VPNNoHWID = !on })
+	a.emitState()
+	if !a.vpn.State().HasSub {
+		return ""
+	}
+	return a.RefreshSubscription()
 }
 
 func (a *App) SetActiveSub(id string) string {

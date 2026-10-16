@@ -18,6 +18,8 @@ const EN = {
   "Отключено": "Disconnected",
   "Подключение": "Connecting",
   "Подключено": "Connected",
+  "Доступна версия {x}": "Version {x} is available",
+  "Скачать": "Download",
   "Ошибка": "Error",
   "Нажмите, чтобы подключиться": "Tap to connect",
   "Секунду…": "One moment…",
@@ -118,6 +120,11 @@ const EN = {
   "Удалить подписку {x}? {y}": "Remove subscription {x}? {y}",
   "VPN переключится на другую подписку.": "VPN will switch to another subscription.",
   "VPN отключится.": "VPN will disconnect.",
+  "Устройство": "Device",
+  "Отправлять HWID устройства": "Send device HWID",
+  "нужно панелям с лимитом устройств (Remnawave)": "required by panels with a device limit (Remnawave)",
+  "HWID этого компьютера: {x}": "This computer's HWID: {x}",
+  "Панель не узнает это устройство. Подписка с лимитом устройств может не загрузиться.": "The panel won't recognise this device. A subscription with a device limit may fail to load.",
 
   // обход
   "Проверка": "Check",

@@ -91,7 +91,7 @@ func DiagTUN() string {
 		return report
 	}
 	defer e.stop()
-	if err := setupTunRoutes(); err != nil {
+	if err := setupTunRoutes(TunName); err != nil {
 		say("маршруты: %v", err)
 	}
 	time.Sleep(3 * time.Second)
@@ -124,12 +124,12 @@ func DiagTUN() string {
 	// «initialization already completed».
 	say("\n--- перезапуск TUN ---")
 	e.stop()
-	say("адаптер исчез после остановки: %v", waitTunGone(3*time.Second))
+	say("адаптер исчез после остановки: %v", waitTunGone(TunName, 3*time.Second))
 	if err := e.start(js); err != nil {
 		say("повторный старт: ОШИБКА %v", err)
 		return report
 	}
-	if err := setupTunRoutes(); err != nil {
+	if err := setupTunRoutes(TunName); err != nil {
 		say("маршруты после перезапуска: %v", err)
 	}
 	time.Sleep(2 * time.Second)
@@ -144,7 +144,7 @@ func DiagTUN() string {
 		say("%-40s %d за %v", u, resp.StatusCode, time.Since(start).Round(time.Millisecond))
 	}
 	e.stop()
-	say("адаптер исчез после выключения: %v", waitTunGone(3*time.Second))
+	say("адаптер исчез после выключения: %v", waitTunGone(TunName, 3*time.Second))
 	left := strings.Contains(run("route", "print", "-4"), "198.18.0.1")
 	say("маршруты TUN остались после выключения: %v", left)
 	return report

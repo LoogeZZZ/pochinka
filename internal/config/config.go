@@ -26,13 +26,16 @@ type Config struct {
 	// VPN
 	VPNActiveSub string `json:"vpnActiveSub"` // ID активной подписки (сами подписки — в vpn-subs\)
 	// Устарело: одиночная подписка до версии с мульти-подписками, переносится автоматически.
-	VPNSubURL    string `json:"vpnSubUrl,omitempty"`
-	VPNSelected  string `json:"vpnSelected,omitempty"`
-	VPNMode      string `json:"vpnMode"`     // proxy | tun
-	VPNRouteAll  bool   `json:"vpnRouteAll"` // через VPN всё, кроме российского
-	VPNHTTPPort  int    `json:"vpnHttpPort"`
-	VPNSocksPort int    `json:"vpnSocksPort"`
-	VPNConnected bool   `json:"vpnConnected"`
+	VPNSubURL   string `json:"vpnSubUrl,omitempty"`
+	VPNSelected string `json:"vpnSelected,omitempty"`
+	VPNMode     string `json:"vpnMode"`     // proxy | tun
+	VPNRouteAll bool   `json:"vpnRouteAll"` // через VPN всё, кроме российского
+	// VPNNoHWID — не отправлять HWID устройства при загрузке подписки (по
+	// умолчанию отправляем: панели с лимитом устройств без него отдают 404).
+	VPNNoHWID    bool `json:"vpnNoHwid,omitempty"`
+	VPNHTTPPort  int  `json:"vpnHttpPort"`
+	VPNSocksPort int  `json:"vpnSocksPort"`
+	VPNConnected bool `json:"vpnConnected"`
 
 	// Telegram-прокси (tg-ws-proxy): включён ли, секрет (32 hex) и порт.
 	TGEnabled bool   `json:"tgEnabled"`

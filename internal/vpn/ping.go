@@ -16,7 +16,9 @@ import (
 // TCP и при этом ничего не пропускать.
 // Не Google: серверы «белых списков» пропускают Google, но не остальной
 // интернет, и замер через gstatic принимал их за живые.
-const probeURL = "https://www.cloudflare.com/cdn-cgi/trace"
+// probeURL — переменная только ради тестов (локальная страница вместо
+// Cloudflare).
+var probeURL = "https://www.cloudflare.com/cdn-cgi/trace"
 
 // PingAll проверяет все серверы одним временным экземпляром xray: у каждого
 // сервера свой локальный порт. Результат — мс, -1 если сервер не пропускает

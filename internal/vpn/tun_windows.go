@@ -148,11 +148,11 @@ func PhysicalInterface() (*net.Interface, error) {
 	return net.InterfaceByIndex(best.index)
 }
 
-// waitTunGone ждёт, пока наш адаптер исчезнет из системы. true — исчез.
-func waitTunGone(timeout time.Duration) bool {
+// waitTunGone ждёт, пока адаптер name исчезнет из системы. true — исчез.
+func waitTunGone(name string, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if _, err := net.InterfaceByName(TunName); err != nil {
+		if _, err := net.InterfaceByName(name); err != nil {
 			return true
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -178,7 +178,7 @@ func ForeignVPN() string {
 		if a.index != int(idx) {
 			continue
 		}
-		if a.name == TunName || !isVirtual(a) {
+		if strings.HasPrefix(a.name, TunName) || !isVirtual(a) { // наш (основной или запасной)
 			return ""
 		}
 		if a.descr != "" && a.descr != a.name {
@@ -193,10 +193,10 @@ func ForeignVPN() string {
 // него весь IPv4 двумя маршрутами /1 (они точнее основного 0.0.0.0/0, и при
 // этом сам основной маршрут не трогаем — после выхода всё как было).
 // Маршруты store=active: исчезают вместе с адаптером и после перезагрузки.
-func setupTunRoutes() error {
+func setupTunRoutes(name string) error {
 	var ifc *net.Interface
 	for i := 0; i < 50; i++ {
-		if c, err := net.InterfaceByName(TunName); err == nil {
+		if c, err := net.InterfaceByName(name); err == nil {
 			ifc = c
 			break
 		}
@@ -206,9 +206,9 @@ func setupTunRoutes() error {
 		return errors.New("адаптер TUN не появился")
 	}
 	steps := [][]string{
-		{"interface", "ipv4", "set", "address", "name=" + TunName, "source=static", "address=198.18.0.1", "mask=255.255.255.252"},
-		{"interface", "ipv4", "add", "route", "prefix=0.0.0.0/1", "interface=" + TunName, "nexthop=0.0.0.0", "metric=1", "store=active"},
-		{"interface", "ipv4", "add", "route", "prefix=128.0.0.0/1", "interface=" + TunName, "nexthop=0.0.0.0", "metric=1", "store=active"},
+		{"interface", "ipv4", "set", "address", "name=" + name, "source=static", "address=198.18.0.1", "mask=255.255.255.252"},
+		{"interface", "ipv4", "add", "route", "prefix=0.0.0.0/1", "interface=" + name, "nexthop=0.0.0.0", "metric=1", "store=active"},
+		{"interface", "ipv4", "add", "route", "prefix=128.0.0.0/1", "interface=" + name, "nexthop=0.0.0.0", "metric=1", "store=active"},
 	}
 	for _, args := range steps {
 		cmd := exec.Command("netsh", args...)
@@ -221,9 +221,9 @@ func setupTunRoutes() error {
 	// уходили бы мимо VPN по IPv6. Без IPv6 у провайдера это ничего не
 	// меняет, поэтому ошибки тут не фатальны.
 	for _, args := range [][]string{
-		{"interface", "ipv6", "add", "address", "interface=" + TunName, "address=fdfe:dcba:9876::1/126", "store=active"},
-		{"interface", "ipv6", "add", "route", "prefix=::/1", "interface=" + TunName, "metric=1", "store=active"},
-		{"interface", "ipv6", "add", "route", "prefix=8000::/1", "interface=" + TunName, "metric=1", "store=active"},
+		{"interface", "ipv6", "add", "address", "interface=" + name, "address=fdfe:dcba:9876::1/126", "store=active"},
+		{"interface", "ipv6", "add", "route", "prefix=::/1", "interface=" + name, "metric=1", "store=active"},
+		{"interface", "ipv6", "add", "route", "prefix=8000::/1", "interface=" + name, "metric=1", "store=active"},
 	} {
 		cmd := exec.Command("netsh", args...)
 		hideWindow(cmd)

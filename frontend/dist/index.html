@@ -24,6 +24,7 @@
 
   <div class="note" id="adminNote" hidden>Нужны права администратора — перезапустите программу от имени администратора.</div>
   <div class="note warn" id="conflictNote" hidden></div>
+  <div class="note update" id="updateNote" hidden><span id="updateText"></span><button class="link" id="updateBtn">Скачать</button></div>
 
   <!-- ================= Главный экран ================= -->
   <section class="view" id="viewMain">
@@ -129,6 +130,15 @@
           <button class="item" id="vpnSites"><span class="two">Свои сайты через VPN<small>всё остальное — по базе блокировок</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
         </div>
       </div>
+
+      <div class="group-title">Устройство</div>
+      <div class="list">
+        <label class="item">
+          <span class="two">Отправлять HWID устройства<small>нужно панелям с лимитом устройств (Remnawave)</small></span>
+          <span class="switch"><input type="checkbox" id="sendHwid"><i></i></span>
+        </label>
+      </div>
+      <p class="hint" id="hwidHint" style="margin-top:8px"></p>
     </div>
   </section>
 

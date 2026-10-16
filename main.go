@@ -2,9 +2,11 @@ package main
 
 import (
 	"embed"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -42,6 +44,8 @@ func main() {
 		}
 	}()
 	applog.Init(paths.LogFile())
+	log.SetFlags(0)
+	log.SetOutput(stdLog{})
 	if secErr != nil {
 		applog.Printf("ВНИМАНИЕ: не удалось закрыть права на папку данных: %v", secErr)
 	}
@@ -124,4 +128,16 @@ func windowBackground() *options.RGBA {
 		return light
 	}
 	return dark
+}
+
+// stdLog — стандартный лог Go → журнал Починки. В него пишут библиотеки:
+// wintun объясняет здесь, почему не создался адаптер TUN. Без этого
+// сообщения уходили в stderr, которого у оконного приложения нет.
+type stdLog struct{}
+
+func (stdLog) Write(p []byte) (int, error) {
+	if s := strings.TrimSpace(string(p)); s != "" {
+		applog.Printf("%s", s)
+	}
+	return len(p), nil
 }
