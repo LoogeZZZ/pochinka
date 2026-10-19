@@ -52,3 +52,20 @@ func TestPrettyStrategy(t *testing.T) {
 		}
 	}
 }
+
+func TestRankPicks(t *testing.T) {
+	in := []PickResult{
+		{Name: "a", Discord: true, YouTube: false, Latency: 50},
+		{Name: "b", Discord: true, YouTube: true, Latency: 900},
+		{Name: "c", Discord: true, YouTube: true, Latency: 300},
+		{Name: "d", Discord: false, YouTube: true, Latency: 10},
+	}
+	got := rankPicks(in)
+	order := ""
+	for _, r := range got {
+		order += r.Name
+	}
+	if order != "cbda" || countFull(got) != 2 {
+		t.Fatalf("порядок %s, полных %d", order, countFull(got))
+	}
+}

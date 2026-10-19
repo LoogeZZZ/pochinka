@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"pochinka/internal/applog"
@@ -10,19 +11,37 @@ import (
 	"pochinka/internal/zapret"
 )
 
-// PickState — автоподбор стратегии для окна.
-type PickState struct {
-	Running bool   `json:"running"`
-	Current string `json:"current"` // какую стратегию пробуем сейчас
-	Done    int    `json:"done"`
-	Total   int    `json:"total"`
-	Result  string `json:"result"` // итог последнего подбора
-	OK      bool   `json:"ok"`
+// pickWant — сколько полностью рабочих стратегий ищем, чтобы у пользователя
+// был выбор, а не одна «подошедшая»: у разных стратегий разная скорость, и
+// какая-то может перестать работать завтра.
+const pickWant = 7
+
+// PickResult — стратегия, на которой открылся хотя бы один сервис.
+type PickResult struct {
+	Name    string `json:"name"`   // как в списке стратегий ("general (ALT2)")
+	Pretty  string `json:"pretty"` // для показа ("ALT2")
+	Discord bool   `json:"discord"`
+	YouTube bool   `json:"youtube"`
+	Latency int64  `json:"latencyMs"` // сумма по обоим сервисам
 }
 
-// AutoPickStrategy перебирает стратегии zapret, пока не откроются и Discord,
-// и YouTube. Начинает с текущей. Если ни одна не открыла оба — оставляет ту,
-// что открыла хотя бы один (быстрее — лучше), а если и такой нет — исходную.
+func (r PickResult) full() bool { return r.Discord && r.YouTube }
+
+// PickState — автоподбор стратегии для окна.
+type PickState struct {
+	Running bool         `json:"running"`
+	Current string       `json:"current"` // какую стратегию пробуем сейчас
+	Done    int          `json:"done"`
+	Total   int          `json:"total"`
+	Found   int          `json:"found"`  // сколько полностью рабочих уже нашли
+	Result  string       `json:"result"` // итог последнего подбора
+	OK      bool         `json:"ok"`
+	Results []PickResult `json:"results"` // рабочие, лучшие сверху
+}
+
+// AutoPickStrategy проверяет стратегии zapret (начиная с текущей), пока не
+// наберёт pickWant полностью рабочих или не кончится список. Включает самую
+// быструю, остальные показывает списком на выбор.
 func (a *App) AutoPickStrategy() string {
 	if a.zapret == nil {
 		return "Обход недоступен — см. журнал"
@@ -41,7 +60,7 @@ func (a *App) AutoPickStrategy() string {
 	return ""
 }
 
-// StopPickStrategy — «Остановить» в окне.
+// StopPickStrategy — «Остановить» в окне. Уже найденное не пропадает.
 func (a *App) StopPickStrategy() {
 	a.mu.Lock()
 	c := a.pickCancel
@@ -51,10 +70,35 @@ func (a *App) StopPickStrategy() {
 	}
 }
 
+// ApplyPicked — выбор из списка «Подошли».
+func (a *App) ApplyPicked(name string) string {
+	a.mu.Lock()
+	running, known := a.pick.Running, false
+	for _, r := range a.pick.Results {
+		if r.Name == name {
+			known = true
+		}
+	}
+	a.mu.Unlock()
+	if running || !known {
+		return ""
+	}
+	return a.SetStrategy(name)
+}
+
 func (a *App) runPick(ctx context.Context, cancel context.CancelFunc) {
 	defer cancel()
+	var results []PickResult
+	publish := func() {
+		sorted := rankPicks(results)
+		a.mu.Lock()
+		a.pick.Results = sorted
+		a.pick.Found = countFull(sorted)
+		a.mu.Unlock()
+	}
 	finish := func(ok bool, msg string) {
 		applog.Printf("подбор стратегии: %s", msg)
+		publish()
 		a.mu.Lock()
 		a.pick.Running, a.pick.OK, a.pick.Result, a.pick.Current = false, ok, msg, ""
 		a.pickCancel = nil
@@ -78,16 +122,11 @@ func (a *App) runPick(ctx context.Context, cancel context.CancelFunc) {
 		}
 	}
 
-	type cand struct {
-		name    string
-		latency int64
-	}
-	var partial *cand
+	stopped := false
 	for i, name := range order {
 		if ctx.Err() != nil {
-			a.restoreStrategy(orig)
-			finish(false, "остановлено — вернул «"+prettyStrategy(orig)+"»")
-			return
+			stopped = true
+			break
 		}
 		// Обход выключили вручную — подбирать нечего.
 		if i > 0 && a.zapret.State().Status != zapret.StatusRunning {
@@ -122,30 +161,65 @@ func (a *App) runPick(ctx context.Context, cancel context.CancelFunc) {
 
 		d, y := res["discord"], res["youtube"]
 		applog.Printf("подбор: «%s» — Discord %v, YouTube %v", prettyStrategy(name), d.OK, y.OK)
-		if d.OK && y.OK {
-			finish(true, fmt.Sprintf("подошла «%s»: Discord и YouTube открываются", prettyStrategy(name)))
+		if d.OK || y.OK {
+			results = append(results, PickResult{Name: name, Pretty: prettyStrategy(name),
+				Discord: d.OK, YouTube: y.OK, Latency: d.Latency + y.Latency})
+			publish()
+			a.emitState()
+		}
+		if countFull(results) >= pickWant {
+			break
+		}
+	}
+
+	ranked := rankPicks(results)
+	switch {
+	case len(ranked) > 0 && ranked[0].full():
+		a.restoreStrategy(ranked[0].Name)
+		msg := fmt.Sprintf("включил самую быструю — «%s»; подошло вариантов: %d", ranked[0].Pretty, countFull(ranked))
+		if stopped {
+			msg = "остановлено — " + msg
+		}
+		finish(true, msg)
+	case len(ranked) > 0:
+		a.restoreStrategy(ranked[0].Name)
+		finish(false, fmt.Sprintf("полностью не подошла ни одна — включил «%s»: открывается только часть сервисов", ranked[0].Pretty))
+	default:
+		a.restoreStrategy(orig)
+		if stopped {
+			finish(false, "остановлено — вернул «"+prettyStrategy(orig)+"»")
 			return
 		}
-		if d.OK || y.OK {
-			lat := d.Latency + y.Latency
-			if partial == nil || lat < partial.latency {
-				partial = &cand{name, lat}
-			}
+		finish(false, "ни одна стратегия не открыла Discord и YouTube — возможно, их блокируют иначе; попробуйте VPN")
+	}
+}
+
+// rankPicks: сначала открывшие оба сервиса, внутри — по скорости.
+func rankPicks(in []PickResult) []PickResult {
+	out := append([]PickResult(nil), in...)
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].full() != out[j].full() {
+			return out[i].full()
+		}
+		return out[i].Latency < out[j].Latency
+	})
+	return out
+}
+
+func countFull(rs []PickResult) int {
+	n := 0
+	for _, r := range rs {
+		if r.full() {
+			n++
 		}
 	}
-	if partial != nil {
-		a.restoreStrategy(partial.name)
-		finish(false, fmt.Sprintf("полностью не подошла ни одна — оставил «%s»: открывается только часть сервисов", prettyStrategy(partial.name)))
-		return
-	}
-	a.restoreStrategy(orig)
-	finish(false, "ни одна стратегия не открыла Discord и YouTube — возможно, их блокируют иначе; попробуйте VPN")
+	return n
 }
 
 func (a *App) restoreStrategy(name string) {
 	if a.zapret.State().Strategy != name {
 		if err := a.zapret.SetStrategy(a.ctx, name); err != nil {
-			applog.Printf("подбор: не удалось вернуть «%s»: %v", name, err)
+			applog.Printf("подбор: не удалось включить «%s»: %v", name, err)
 		}
 	}
 	go a.RunChecks()

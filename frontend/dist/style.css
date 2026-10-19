@@ -340,3 +340,6 @@ li.wait .val::before { animation: blink 1s infinite; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .btn.danger-btn { background: var(--bad); color: #fff; }
 .btn.danger-btn:hover { opacity: .9; }
+.group-sub { margin: 14px 2px 8px; font-size: 11.5px; color: var(--muted); }
+.group-sub[hidden] { display: none; }
+.pick-list { margin-bottom: 4px; }

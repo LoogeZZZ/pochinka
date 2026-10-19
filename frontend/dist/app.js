@@ -307,8 +307,10 @@ function renderZapretView(s) {
   ps.hidden = !pk.running && !pk.result;
   ps.className = "hint pick-status" + (pk.running ? "" : pk.ok ? " ok" : " bad");
   ps.textContent = pk.running
-    ? t("Пробую {x} из {y}: ", (pk.done || 0) + 1, pk.total || "…") + (pk.current || "") + "…"
+    ? t("Пробую {x} из {y}: ", (pk.done || 0) + 1, pk.total || "…") + (pk.current || "") + "…" +
+      (pk.found ? " · " + t("подошло: {x}", pk.found) : "")
     : pk.result || "";
+  renderPickList(pk, z.strategy);
   for (const li of document.querySelectorAll(".services li[data-key]")) {
     const r = s.checks[li.dataset.key];
     const val = li.querySelector(".val");
@@ -358,6 +360,35 @@ function renderSettings(s) {
   for (const b of $("lang").children) b.classList.toggle("sel", b.dataset.v === LANG);
   $("autostart").checked = !!s.autostart;
   $("appVer").textContent = "Починка " + (s.version || "");
+}
+
+// Список «Подошли»: рабочие стратегии из последнего подбора, лучшие сверху.
+function renderPickList(pk, current) {
+  const res = (pk.results || []).slice(0, 7);
+  const ul = $("pickList");
+  const has = res.length > 0;
+  ul.hidden = $("pickTitle").hidden = $("allTitle").hidden = !has;
+  if (!has) return;
+  const sig = res.map((r) => r.name + r.latencyMs + r.discord + r.youtube).join("|") + LANG + !!pk.running;
+  if (ul.dataset.sig !== sig) {
+    ul.innerHTML = "";
+    for (const r of res) {
+      const li = document.createElement("li");
+      li.dataset.name = r.name;
+      li.innerHTML = '<span class="srv"><span class="srv-name"></span><span class="srv-meta"></span></span>' +
+        '<span class="srv-right"><span class="ping"></span>' + CHECK_SVG + "</span>";
+      li.querySelector(".srv-name").textContent = r.pretty;
+      const full = r.discord && r.youtube;
+      li.querySelector(".srv-meta").textContent = full ? t("Discord и YouTube") : r.discord ? t("только Discord") : t("только YouTube");
+      const p = li.querySelector(".ping");
+      p.textContent = t("{x} мс", r.latencyMs);
+      p.className = "ping " + (full ? (r.latencyMs < 1500 ? "good" : "mid") : "bad");
+      li.addEventListener("click", () => { if (!(S && S.pick && S.pick.running)) guarded(() => api().ApplyPicked(r.name)); });
+      ul.appendChild(li);
+    }
+    ul.dataset.sig = sig;
+  }
+  for (const li of ul.children) li.classList.toggle("sel", li.dataset.name === current);
 }
 
 // Тема: "system" — по Windows, "light"/"dark" — принудительно.
