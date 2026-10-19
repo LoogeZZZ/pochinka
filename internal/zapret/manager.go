@@ -15,6 +15,7 @@ import (
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
 	"pochinka/internal/paths"
+	"pochinka/internal/userlists"
 	"pochinka/internal/winutil"
 )
 
@@ -458,12 +459,6 @@ func (m *Manager) AutoUpdateLoop(ctx context.Context) {
 // списки релиза не трогаем — свои домены добавляются через *-user.txt, как
 // и задумано в zapret-discord-youtube.
 func (m *Manager) prepareLists(dir string) error {
-	ud := paths.UserDir()
-	defaults := map[string]string{
-		"list-general-user.txt":  "# Свои домены для обхода, по одному в строке\ndomain.example.abc\n",
-		"list-exclude-user.txt":  "domain.example.abc\n",
-		"ipset-exclude-user.txt": "203.0.113.113/32\n",
-	}
 	cfg := config.Load()
 	rules := CollectGameRules(cfg.DisabledGames, cfg.EnabledGames)
 	m.mu.Lock()
@@ -478,17 +473,13 @@ func (m *Manager) prepareLists(dir string) error {
 		return err
 	}
 
-	for name, def := range defaults {
-		src := filepath.Join(ud, name)
-		if _, err := os.Stat(src); errors.Is(err, os.ErrNotExist) {
-			if err := os.WriteFile(src, []byte(def), 0o644); err != nil {
-				return err
-			}
-		}
-		data, err := os.ReadFile(src)
+	for name := range added {
+		l, _ := userlists.ByFile(name)
+		text, err := l.Read()
 		if err != nil {
 			return err
 		}
+		data := []byte(text)
 		if extra := added[name]; len(extra) > 0 {
 			data = append(data, []byte("\n# добавлено приложением\n"+strings.Join(extra, "\n")+"\n")...)
 		}
@@ -584,3 +575,7 @@ func enableTCPTimestamps() {
 	winutil.HideWindow(cmd)
 	_ = cmd.Run()
 }
+
+// ApplyLists — пересобрать списки и перезапустить обход, если он включён
+// (после правки своих списков в окне).
+func (m *Manager) ApplyLists(ctx context.Context) error { return m.restartIfWanted(ctx) }

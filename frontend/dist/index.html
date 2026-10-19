@@ -127,7 +127,7 @@
         </div>
         <p class="hint" id="routeHint" style="margin-top:8px"></p>
         <div class="list">
-          <button class="item" id="vpnSites"><span class="two">Свои сайты через VPN<small>всё остальное — по базе блокировок</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+          <button class="item" data-list="vpn-sites"><span class="two">Свои сайты через VPN<small>всё остальное — по базе блокировок</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
         </div>
       </div>
 
@@ -217,9 +217,11 @@
         </button>
       </div>
 
-      <div class="group-title">Прочее</div>
+      <div class="group-title">Свои списки</div>
       <div class="list">
-        <button class="item" id="userLists"><span class="two">Свои домены для обхода<small>откроется список в Блокноте</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" data-list="zapret-include"><span class="two">Домены для обхода<small>сайты, которые обход тоже будет чинить</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" data-list="zapret-exclude"><span class="two">Исключения: домены<small>сайты, которые обход не трогает</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" data-list="zapret-ipexclude"><span class="two">Исключения: адреса<small>IP и подсети, которые обход не трогает</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
       </div>
     </div>
   </section>
@@ -269,12 +271,28 @@
     </div>
   </section>
 
+  <!-- ================= Редактор своего списка ================= -->
+  <section class="view" id="viewList" hidden>
+    <div class="vhead">
+      <button class="back" data-back="listFrom"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span id="listTitle"></span>
+    </div>
+    <div class="scroll list-edit">
+      <p class="hint" id="listHint"></p>
+      <textarea id="listText" spellcheck="false" wrap="off"></textarea>
+      <div class="add-actions">
+        <span class="list-status" id="listStatus"></span>
+        <button class="btn primary" id="listSave">Сохранить</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= Журнал ================= -->
   <section class="view" id="viewLog" hidden>
     <div class="vhead">
       <button class="back" data-back="viewSettings"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
       <span>Журнал</span>
-      <button class="ghost right" id="openData">Папка</button>
+      <button class="ghost right" id="openLogs">Папка</button>
     </div>
     <pre class="log" id="log"></pre>
   </section>

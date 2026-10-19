@@ -423,7 +423,10 @@ $("btnMin").addEventListener("click", () => window.runtime.WindowMinimise());
 $("btnClose").addEventListener("click", () => window.runtime.WindowHide());
 $("btnSettings").addEventListener("click", () => show($("viewSettings").hidden ? "viewSettings" : "viewMain"));
 for (const b of document.querySelectorAll("[data-back]")) {
-  b.addEventListener("click", () => show(b.dataset.back === "return" ? returnTo : b.dataset.back));
+  b.addEventListener("click", () => {
+    const to = b.dataset.back;
+    show(to === "return" ? returnTo : to === "listFrom" ? listFrom : to);
+  });
 }
 for (const b of document.querySelectorAll("[data-open]")) b.addEventListener("click", () => show(b.dataset.open));
 for (const b of document.querySelectorAll("[data-section]")) b.addEventListener("click", () => openSection(b.dataset.section, "viewSettings"));
@@ -489,7 +492,6 @@ $("pingBtn").addEventListener("click", async () => {
   b.disabled = false;
   b.textContent = t("Проверить пинг");
 });
-$("vpnSites").addEventListener("click", () => api().OpenVPNSites());
 $("sendHwid").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetSendHWID(e.target.checked);
   if (r) alert(r);
@@ -501,7 +503,6 @@ $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
 $("recheck").addEventListener("click", () => api().RunChecks());
 for (const b of $("gameFilter").children) b.addEventListener("click", () => guarded(() => api().SetGameFilter(b.dataset.v)));
 $("autoUpdate").addEventListener("change", (e) => api().SetAutoUpdate(e.target.checked));
-$("userLists").addEventListener("click", () => api().OpenUserLists());
 $("checkUpd").addEventListener("click", async () => {
   const lbl = $("checkUpdLabel");
   if (lbl.dataset.busy) return;
@@ -514,7 +515,7 @@ $("checkUpd").addEventListener("click", async () => {
 // настройки приложения
 for (const b of $("theme").children) b.addEventListener("click", () => { applyTheme(b.dataset.v); api().SetTheme(b.dataset.v); });
 for (const b of $("lang").children) b.addEventListener("click", () => setLang(b.dataset.v, true));
-$("openData").addEventListener("click", () => api().OpenDataFolder());
+$("openLogs").addEventListener("click", () => api().OpenLogsFolder());
 $("autostart").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetAutostart(e.target.checked);
   if (r) { alert(r); if (S) render(S); }
@@ -538,3 +539,45 @@ window.addEventListener("DOMContentLoaded", async () => {
   render(await api().GetState());
   for (const l of await api().GetLog()) appendLog(l);
 });
+
+// ---------------- свои списки ----------------
+
+const LISTS = {
+  "zapret-include": { title: "Домены для обхода", hint: "По одному домену в строке. Поддомены включаются сами; «^» в начале — только сам домен. Строки с # — комментарии." },
+  "zapret-exclude": { title: "Исключения: домены", hint: "Сайты, которые обход не трогает. По одному домену в строке." },
+  "zapret-ipexclude": { title: "Исключения: адреса", hint: "IP-адреса и подсети, которые обход не трогает: 1.2.3.4 или 1.2.3.0/24, по одному в строке." },
+  "vpn-sites": { title: "Свои сайты через VPN", hint: "Эти сайты всегда открываются через VPN. По одному домену в строке; можно вставлять ссылки — домен возьмётся сам." },
+};
+let listFrom = "viewMain";
+let listID = "";
+
+async function openList(id) {
+  const meta = LISTS[id];
+  if (!meta) return;
+  listID = id;
+  listFrom = [...document.querySelectorAll(".view")].find((v) => !v.hidden)?.id || "viewMain";
+  $("listTitle").textContent = t(meta.title);
+  $("listHint").textContent = t(meta.hint);
+  $("listStatus").textContent = "";
+  $("listStatus").className = "list-status";
+  $("listText").value = await api().GetUserList(id);
+  show("viewList");
+  $("listText").focus();
+}
+
+for (const b of document.querySelectorAll("[data-list]")) b.addEventListener("click", () => openList(b.dataset.list));
+
+$("listSave").addEventListener("click", () => guarded(async () => {
+  const st = $("listStatus");
+  $("listSave").disabled = true;
+  const r = await api().SaveUserList(listID, $("listText").value);
+  $("listSave").disabled = false;
+  if (r.error) {
+    st.textContent = r.error;
+    st.className = "list-status err";
+    return;
+  }
+  st.textContent = t("Сохранено · записей: {x}", r.count);
+  st.className = "list-status ok";
+  $("listText").value = await api().GetUserList(listID); // как записалось после проверки
+}));

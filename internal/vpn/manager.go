@@ -18,6 +18,7 @@ import (
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
 	"pochinka/internal/paths"
+	"pochinka/internal/userlists"
 )
 
 type Status string
@@ -117,9 +118,6 @@ func assetDir() string { return filepath.Join(paths.DataDir(), "geo") }
 
 // xrayLog — журнал ядра; переменная, чтобы тесты без прав админа писали в temp.
 var xrayLog = func() string { return filepath.Join(paths.LogsDir(), "xray.log") }
-
-// UserSitesFile — свои сайты, которые всегда идут через VPN.
-func UserSitesFile() string { return filepath.Join(paths.UserDir(), "vpn-sites.txt") }
 
 func modeOf(c config.Config) Mode {
 	if c.VPNMode == string(ModeTUN) {
@@ -788,20 +786,15 @@ func (m *Manager) RestartIfRunning(ctx context.Context) {
 	_ = m.start(ctx, ifRunning)
 }
 
-// EnsureUserSites создаёт файл своих сайтов с подсказкой, если его нет.
-func EnsureUserSites() {
-	if _, err := os.Stat(UserSitesFile()); errors.Is(err, os.ErrNotExist) {
-		_ = os.WriteFile(UserSitesFile(), []byte("# Сайты, которые всегда открываются через VPN — по одному в строке.\r\n# Например: example.com\r\n"), 0o644)
-	}
-}
-
+// readUserSites — свои сайты, которые всегда идут через VPN (список
+// редактируется в окне, см. userlists).
 func readUserSites() []string {
-	EnsureUserSites()
-	b, err := os.ReadFile(UserSitesFile())
+	l, _ := userlists.Get("vpn-sites")
+	text, err := l.Read()
 	if err != nil {
 		return nil
 	}
-	return DomainRules(string(b))
+	return DomainRules(text)
 }
 
 // DomainRules превращает список доменов (формат zapret: "^x" — без поддоменов)

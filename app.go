@@ -16,6 +16,7 @@ import (
 	"pochinka/internal/health"
 	"pochinka/internal/paths"
 	"pochinka/internal/tgproxy"
+	"pochinka/internal/userlists"
 	"pochinka/internal/vpn"
 	"pochinka/internal/winutil"
 	"pochinka/internal/zapret"
@@ -594,26 +595,62 @@ func (a *App) SetVPNMode(mode string) string {
 
 func (a *App) PingServers() { a.vpn.Ping(a.ctx) }
 
-// OpenVPNSites открывает список своих сайтов в Блокноте; после закрытия
-// Блокнота VPN перечитывает список.
-func (a *App) OpenVPNSites() {
-	vpn.EnsureUserSites()
+// ---- свои списки (редактор в окне) ----
+
+// ListResult — ответ окну при сохранении списка.
+type ListResult struct {
+	Error string `json:"error"`
+	Count int    `json:"count"` // сколько записей (без комментариев)
+}
+
+// GetUserList — текст списка: zapret-include, zapret-exclude,
+// zapret-ipexclude, vpn-sites.
+func (a *App) GetUserList(id string) string {
+	l, ok := userlists.Get(id)
+	if !ok {
+		return ""
+	}
+	text, err := l.Read()
+	if err != nil {
+		applog.Printf("список %s: %v", id, err)
+	}
+	return text
+}
+
+// SaveUserList проверяет и записывает список, затем применяет его: обход или
+// VPN перечитывают списки, если включены.
+func (a *App) SaveUserList(id, text string) ListResult {
+	l, ok := userlists.Get(id)
+	if !ok {
+		return ListResult{Error: "неизвестный список"}
+	}
+	n, err := l.Save(text)
+	if err != nil {
+		return ListResult{Error: err.Error()}
+	}
+	applog.Printf("список %s сохранён: %d записей", id, n)
 	go func() {
-		cmd := exec.Command("notepad.exe", vpn.UserSitesFile())
-		if err := cmd.Run(); err == nil {
+		if id == "vpn-sites" {
 			a.vpn.RestartIfRunning(a.ctx)
+			return
 		}
+		if a.zapret != nil {
+			if err := a.zapret.ApplyLists(a.ctx); err != nil {
+				applog.Printf("обход: не удалось применить списки: %v", err)
+			}
+		}
+		// Домены обхода идут в VPN напрямую — VPN тоже перечитывает.
+		a.vpn.RestartIfRunning(a.ctx)
 	}()
+	return ListResult{Count: n}
 }
 
 // ---- прочее ----
 
-func (a *App) OpenDataFolder() {
-	_ = exec.Command("explorer.exe", paths.DataDir()).Start()
-}
-
-func (a *App) OpenUserLists() {
-	_ = exec.Command("explorer.exe", paths.UserDir()).Start()
+// OpenLogsFolder — папка журналов (единственная, которую можно открыть с
+// правами пользователя: остальная папка данных — только для администраторов).
+func (a *App) OpenLogsFolder() {
+	_ = exec.Command("explorer.exe", paths.LogsDir()).Start()
 }
 
 // OpenURL — ссылки из подписки (поддержка, личный кабинет).
