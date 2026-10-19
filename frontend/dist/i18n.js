@@ -171,6 +171,9 @@ const EN = {
   "Лицензии": "Licenses",
   "Папка": "Folder",
   "Выйти из программы": "Quit the app",
+  "Удалить Починку": "Uninstall Pochinka",
+  "убрать программу, её настройки и всё, что она меняла": "remove the app, its settings and everything it changed",
+  "Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную.": "Uninstall Pochinka? Unblocking, VPN and the Telegram proxy will be turned off, Windows proxy settings restored, and the app copy, subscriptions, settings and logs deleted. The exe you downloaded stays — you can delete it manually.",
   "Запускать вместе с Windows": "Start with Windows",
   "сразу в трей, без окна": "straight to the tray, no window",
 };

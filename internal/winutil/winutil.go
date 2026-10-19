@@ -180,3 +180,19 @@ func SetServiceManual(name string) error {
 func IsAdmin() bool {
 	return windows.GetCurrentProcessToken().IsElevated()
 }
+
+// DeleteService останавливает и удаляет службу. Отсутствие службы — не ошибка.
+func DeleteService(name string) error {
+	_ = StopService(name, 5*time.Second)
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer m.Disconnect()
+	s, err := m.OpenService(name)
+	if err != nil {
+		return nil
+	}
+	defer s.Close()
+	return s.Delete()
+}

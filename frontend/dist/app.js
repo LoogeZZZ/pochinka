@@ -521,6 +521,11 @@ $("autostart").addEventListener("change", (e) => guarded(async () => {
   if (r) { alert(r); if (S) render(S); }
 }));
 $("licenses").addEventListener("click", () => api().OpenLicenses());
+$("uninstall").addEventListener("click", async () => {
+  if (!confirm(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную."))) return;
+  const r = await api().Uninstall();
+  if (r) alert(r);
+});
 $("quit").addEventListener("click", () => api().Quit());
 
 // журнал
