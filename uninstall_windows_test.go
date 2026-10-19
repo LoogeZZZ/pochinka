@@ -44,3 +44,11 @@ func TestRemoveAfterExitLive(t *testing.T) {
 		}
 	}
 }
+
+func TestPrettyStrategy(t *testing.T) {
+	for in, want := range map[string]string{"general": "Стандартная", "general (ALT2)": "ALT2", "general (FAKE TLS AUTO)": "FAKE TLS AUTO", "discord": "discord"} {
+		if got := prettyStrategy(in); got != want {
+			t.Errorf("%q → %q, want %q", in, got, want)
+		}
+	}
+}

@@ -32,14 +32,16 @@ type App struct {
 	tray   *tray
 	tg     *telegram
 
-	mu        sync.Mutex
-	checks    map[string]health.Result
-	checking  bool
-	quitting  bool
-	conflict  string             // чужой VPN, который перехватывает интернет (Happ, v2rayN…)
-	autostart bool               // есть задача автозапуска
-	appUpdate AppUpdate          // новая версия Починки на GitHub
-	onCancel  context.CancelFunc // отмена идущего включения обхода/VPN
+	mu         sync.Mutex
+	checks     map[string]health.Result
+	checking   bool
+	quitting   bool
+	conflict   string    // чужой VPN, который перехватывает интернет (Happ, v2rayN…)
+	autostart  bool      // есть задача автозапуска
+	appUpdate  AppUpdate // новая версия Починки на GitHub
+	pick       PickState // автоподбор стратегии
+	pickCancel context.CancelFunc
+	onCancel   context.CancelFunc // отмена идущего включения обхода/VPN
 
 	modeMu sync.Mutex // переключение режимов обход ⇄ VPN
 
@@ -63,6 +65,7 @@ type UIState struct {
 	Autostart bool                     `json:"autostart"`
 	Version   string                   `json:"version"`
 	Update    AppUpdate                `json:"update"`
+	Pick      PickState                `json:"pick"`
 }
 
 func NewApp() *App {
@@ -245,13 +248,14 @@ func (a *App) GetState() UIState {
 	for k, v := range a.checks {
 		checks[k] = v
 	}
-	checking, conflict, autostart, upd := a.checking, a.conflict, a.autostart, a.appUpdate
+	checking, conflict, autostart, upd, pick := a.checking, a.conflict, a.autostart, a.appUpdate, a.pick
 	a.mu.Unlock()
 	st := UIState{
 		Conflict:  conflict,
 		Autostart: autostart,
 		Version:   appVersion,
 		Update:    upd,
+		Pick:      pick,
 		Checks:    checks,
 		Checking:  checking,
 		Admin:     winutil.IsAdmin(),

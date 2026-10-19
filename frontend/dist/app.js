@@ -292,6 +292,15 @@ function renderVpnView(s) {
 
 function renderZapretView(s) {
   const z = s.zapret;
+  const pk = s.pick || {};
+  const pb = $("pickBtn"), ps = $("pickStatus");
+  pb.textContent = t(pk.running ? "Остановить подбор" : "Подобрать автоматически");
+  pb.className = "btn wide " + (pk.running ? "ghost-btn" : "primary");
+  ps.hidden = !pk.running && !pk.result;
+  ps.className = "hint pick-status" + (pk.running ? "" : pk.ok ? " ok" : " bad");
+  ps.textContent = pk.running
+    ? t("Пробую {x} из {y}: ", (pk.done || 0) + 1, pk.total || "…") + (pk.current || "") + "…"
+    : pk.result || "";
   for (const li of document.querySelectorAll(".services li[data-key]")) {
     const r = s.checks[li.dataset.key];
     const val = li.querySelector(".val");
@@ -313,7 +322,7 @@ function renderZapretView(s) {
       li.dataset.name = n;
       li.innerHTML = "<span></span>" + CHECK_SVG;
       li.firstChild.textContent = prettyName(n);
-      li.addEventListener("click", () => guarded(() => api().SetStrategy(n)));
+      li.addEventListener("click", () => { if (!(S && S.pick && S.pick.running)) guarded(() => api().SetStrategy(n)); });
       ul.appendChild(li);
     }
     ul.dataset.list = sig;
@@ -500,6 +509,12 @@ $("updateBtn").addEventListener("click", () => api().OpenAppUpdate());
 $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
 
 // обход
+$("pickBtn").addEventListener("click", () => {
+  if (S && S.pick && S.pick.running) { api().StopPickStrategy(); return; }
+  if (S && ["running", "starting"].includes(S.vpn.status) &&
+      !confirm(t("Для подбора нужен обход — VPN будет выключен. Продолжить?"))) return;
+  api().AutoPickStrategy();
+});
 $("recheck").addEventListener("click", () => api().RunChecks());
 for (const b of $("gameFilter").children) b.addEventListener("click", () => guarded(() => api().SetGameFilter(b.dataset.v)));
 $("autoUpdate").addEventListener("change", (e) => api().SetAutoUpdate(e.target.checked));

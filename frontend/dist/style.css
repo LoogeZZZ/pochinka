@@ -317,3 +317,9 @@ li.wait .val::before { animation: blink 1s infinite; }
 .list-status { flex: 1; font-size: 12px; color: var(--muted); }
 .list-status.ok { color: var(--on); }
 .list-status.err { color: var(--bad); }
+
+/* автоподбор стратегии */
+.pick { margin: 4px 0 10px; }
+.pick-status { margin: 8px 0 0; }
+.pick-status.ok { color: var(--on); }
+.pick-status.bad { color: var(--warn); }
