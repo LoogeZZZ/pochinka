@@ -23,6 +23,7 @@ type Kind int
 const (
 	Domains Kind = iota // домены (формат zapret: «^» в начале — без поддоменов)
 	IPs                 // адреса и подсети
+	Mixed               // домены, адреса и программы (*.exe) — правила VPN
 )
 
 // List — один список.
@@ -40,8 +41,10 @@ var lists = []List{
 		Default: "# Домены, которые обход не трогает\ndomain.example.abc\n"},
 	{ID: "zapret-ipexclude", File: "ipset-exclude-user.txt", Kind: IPs,
 		Default: "# Адреса и подсети, которые обход не трогает\n203.0.113.113/32\n"},
-	{ID: "vpn-sites", File: "vpn-sites.txt", Kind: Domains,
-		Default: "# Сайты, которые всегда открываются через VPN — по одному в строке.\n# Например: example.com\n"},
+	{ID: "vpn-sites", File: "vpn-sites.txt", Kind: Mixed,
+		Default: "# Всегда через VPN: домены, IP/подсети и программы (*.exe), по одному в строке.\n# Например: example.com, 1.2.3.0/24, Discord.exe\n"},
+	{ID: "vpn-direct", File: "vpn-direct.txt", Kind: Mixed,
+		Default: "# Всегда напрямую, мимо VPN: домены, IP/подсети и программы (*.exe), по одному в строке.\n# Например: mybank.ru, 10.0.0.0/8, steam.exe\n"},
 }
 
 // Get — список по ID.
@@ -118,8 +121,11 @@ func (l List) Save(text string) (int, error) {
 		v, ok := normalize(l.Kind, line)
 		if !ok {
 			what := "домен"
-			if l.Kind == IPs {
+			switch l.Kind {
+			case IPs:
 				what = "адрес или подсеть (например 1.2.3.4 или 1.2.3.0/24)"
+			case Mixed:
+				what = "домен, адрес/подсеть или программа .exe"
 			}
 			return 0, fmt.Errorf("строка %d: «%s» — не %s", i+1, clip(line, 60), what)
 		}
@@ -137,6 +143,18 @@ func (l List) Save(text string) (int, error) {
 
 // normalize приводит строку к виду, понятному zapret и xray, или отказывает.
 func normalize(k Kind, s string) (string, bool) {
+	if k == Mixed {
+		if IsProgram(s) {
+			if !validProgram(s) {
+				return "", false
+			}
+			return s, true
+		}
+		if v, ok := normalize(IPs, s); ok {
+			return v, true
+		}
+		return normalize(Domains, s)
+	}
 	if k == IPs {
 		if p, err := netip.ParsePrefix(s); err == nil {
 			return p.Masked().String(), true
@@ -164,6 +182,23 @@ func normalize(k Kind, s string) (string, bool) {
 		return "^" + d, true
 	}
 	return d, true
+}
+
+// IsProgram — строка про программу: имя файла .exe (как в Диспетчере задач).
+func IsProgram(s string) bool { return strings.HasSuffix(strings.ToLower(s), ".exe") }
+
+// validProgram — только имя файла, без пути и спецсимволов.
+func validProgram(s string) bool {
+	name := s[:len(s)-4]
+	if name == "" || len(s) > 128 {
+		return false
+	}
+	for _, r := range name {
+		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune(" ._-+()", r)) {
+			return false
+		}
+	}
+	return true
 }
 
 func isDomain(s string) bool {

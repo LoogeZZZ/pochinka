@@ -62,3 +62,21 @@ func TestEnsureDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSaveMixed(t *testing.T) {
+	isolate(t)
+	l, _ := Get("vpn-direct")
+	n, err := l.Save("bank.ru\n10.0.0.1/8\nSteam.exe\nmy app (x64).exe\n")
+	if err != nil || n != 4 {
+		t.Fatalf("n=%d err=%v", n, err)
+	}
+	got, _ := l.Read()
+	if got != "bank.ru\n10.0.0.0/8\nSteam.exe\nmy app (x64).exe\n" {
+		t.Fatalf("got %q", got)
+	}
+	for _, bad := range []string{`C:\x\evil.exe`, "a/b.exe", ".exe", "x;y.exe"} {
+		if _, err := l.Save(bad + "\n"); err == nil {
+			t.Errorf("пропущено %q", bad)
+		}
+	}
+}

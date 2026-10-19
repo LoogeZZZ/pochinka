@@ -634,7 +634,7 @@ func (a *App) SaveUserList(id, text string) ListResult {
 	}
 	applog.Printf("список %s сохранён: %d записей", id, n)
 	go func() {
-		if id == "vpn-sites" {
+		if strings.HasPrefix(id, "vpn-") {
 			a.vpn.RestartIfRunning(a.ctx)
 			return
 		}

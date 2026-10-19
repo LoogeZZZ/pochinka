@@ -18,7 +18,6 @@ import (
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
 	"pochinka/internal/paths"
-	"pochinka/internal/userlists"
 )
 
 type Status string
@@ -607,7 +606,8 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	opts := BuildOptions{
 		Servers: use, Auto: auto, Mode: mode,
 		HTTPPort: cfg.VPNHTTPPort, SocksPort: cfg.VPNSocksPort,
-		LogFile: xrayLog(), ZapretDomains: m.zapretDomains(), UserDomains: readUserSites(),
+		LogFile: xrayLog(), ZapretDomains: m.zapretDomains(),
+		UserProxy: readUserRules("vpn-sites"), UserDirect: readUserRules("vpn-direct"),
 		RouteAll: cfg.VPNRouteAll,
 	}
 	var physIdx int
@@ -784,17 +784,6 @@ func (m *Manager) Loop(ctx context.Context) {
 // не поднимается сам по себе.
 func (m *Manager) RestartIfRunning(ctx context.Context) {
 	_ = m.start(ctx, ifRunning)
-}
-
-// readUserSites — свои сайты, которые всегда идут через VPN (список
-// редактируется в окне, см. userlists).
-func readUserSites() []string {
-	l, _ := userlists.Get("vpn-sites")
-	text, err := l.Read()
-	if err != nil {
-		return nil
-	}
-	return DomainRules(text)
 }
 
 // DomainRules превращает список доменов (формат zapret: "^x" — без поддоменов)

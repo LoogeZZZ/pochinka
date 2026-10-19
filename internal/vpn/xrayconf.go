@@ -54,6 +54,10 @@ type BuildOptions struct {
 	ZapretDomains []string
 	// UserDomains — сайты, которые пользователь сам отправил через VPN.
 	UserDomains []string
+	// UserProxy / UserDirect — свои правила «всегда через VPN» и «всегда
+	// напрямую» (домены, адреса, программы). Важнее всех остальных правил,
+	// кроме локальной сети: пользователь решил явно.
+	UserProxy, UserDirect UserRules
 	// RouteAll — через VPN всё, кроме российского (а не только базу
 	// блокировок). ТСПУ «замедляет» зарубежные хостинги (DigitalOcean,
 	// Hetzner…) без всяких списков — в этом режиме они идут через VPN.
@@ -205,16 +209,40 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 	rules := []any{
 		map[string]any{"type": "field", "ip": []string{"geoip:private"}, "outboundTag": "direct"},
 		map[string]any{"type": "field", "domain": []string{"geosite:private"}, "outboundTag": "direct"},
+	}
+	// Свои правила: сначала «напрямую», потом «через VPN» (если адрес попал в
+	// оба списка, безопаснее не уводить его в VPN). Программы — последними в
+	// каждой группе: поиск процесса по соединению дороже сравнения доменов.
+	proxy := o.UserProxy
+	proxy.Domains = append(append([]string(nil), proxy.Domains...), o.UserDomains...)
+	addUser := func(r UserRules, out func(map[string]any) map[string]any) {
+		if len(r.Domains) > 0 {
+			rules = append(rules, out(map[string]any{"type": "field", "domain": r.Domains}))
+		}
+		if len(r.IPs) > 0 {
+			rules = append(rules, out(map[string]any{"type": "field", "ip": r.IPs}))
+		}
+		if len(r.Procs) > 0 {
+			rules = append(rules, out(map[string]any{"type": "field", "process": r.Procs}))
+		}
+	}
+	toDirect := func(r map[string]any) map[string]any { r["outboundTag"] = "direct"; return r }
+	addUser(o.UserDirect, toDirect)
+	if !proxy.empty() {
+		// QUIC через VPN не пройдёт (Vision его отвергает) — отбиваем сразу.
+		if len(proxy.Domains) > 0 {
+			rules = append(rules, map[string]any{"type": "field", "network": "udp", "port": "443", "domain": proxy.Domains, "outboundTag": "block"})
+		}
+		addUser(proxy, toProxy)
+	}
+	rules = append(rules,
 		// Госуслуги, банки и сервисы «только из РФ» — никогда через VPN.
 		map[string]any{"type": "field", "domain": []string{"geosite:category-gov-ru", "geosite:ru-available-only-inside"}, "outboundTag": "direct"},
-	}
+	)
 	// Сервисы, которые сами не пускают из России (РКН их не блокирует, поэтому
 	// их нет в базе блокировок). Правило стоит выше «того, что чинит zapret»:
 	// иначе gemini.google.com ушёл бы напрямую вместе с остальным Google.
 	rules = append(rules, toProxy(map[string]any{"type": "field", "domain": GeoBlockedServices}))
-	if len(o.UserDomains) > 0 {
-		rules = append(rules, toProxy(map[string]any{"type": "field", "domain": o.UserDomains}))
-	}
 	if len(o.ZapretDomains) > 0 {
 		rules = append(rules, map[string]any{"type": "field", "domain": o.ZapretDomains, "outboundTag": "direct"})
 	}
