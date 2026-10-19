@@ -24,7 +24,7 @@
 
   <div class="note" id="adminNote" hidden>Нужны права администратора — перезапустите программу от имени администратора.</div>
   <div class="note warn" id="conflictNote" hidden></div>
-  <div class="note update" id="updateNote" hidden><span id="updateText"></span><button class="link" id="updateBtn">Скачать</button></div>
+  <div class="note update" id="updateNote" hidden><span id="updateText"></span><span class="update-actions"><button class="link" id="updatePage">Что нового</button><button class="link" id="updateBtn">Обновить</button></span></div>
 
   <!-- ================= Главный экран ================= -->
   <section class="view" id="viewMain">
@@ -268,6 +268,7 @@
       <div class="group-title">Прочее</div>
       <div class="list">
         <button class="item" id="licenses"><span>Лицензии</span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="item" id="copyReport"><span class="two">Скопировать отчёт<small>для вопроса в поддержку: состояние и журнал, без подписок и ключей</small></span><span class="muted" id="copyReportLabel"></span></button>
         <button class="item" data-open="viewLog"><span>Журнал</span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
         <button class="item" id="quit"><span class="danger">Выйти из программы</span></button>
         <button class="item" id="uninstall"><span class="two"><span class="danger">Удалить Починку</span><small>убрать программу, её настройки и всё, что она меняла</small></span></button>

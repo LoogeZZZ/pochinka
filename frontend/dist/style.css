@@ -323,3 +323,5 @@ li.wait .val::before { animation: blink 1s infinite; }
 .pick-status { margin: 8px 0 0; }
 .pick-status.ok { color: var(--on); }
 .pick-status.bad { color: var(--warn); }
+.update-actions { display: flex; gap: 12px; flex-shrink: 0; }
+.note.update.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }

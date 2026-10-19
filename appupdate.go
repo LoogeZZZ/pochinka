@@ -15,8 +15,8 @@ import (
 )
 
 // Уведомление о новой версии Починки: раз в 6 часов спрашиваем GitHub о
-// последнем релизе и, если он новее, показываем плашку со ссылкой.
-// Сами ничего не скачиваем и не запускаем.
+// последнем релизе и, если он новее, показываем плашку. Установка — по
+// кнопке «Обновить» (appupdate_install.go), только с проверенной подписью.
 
 const (
 	appRepo       = "LoogeZZZ/pochinka"
@@ -27,6 +27,12 @@ const (
 type AppUpdate struct {
 	Version string `json:"version"` // "1.0.2"; пусто — обновлений нет
 	URL     string `json:"url"`     // страница релиза
+	Tag     string `json:"-"`       // "v1.0.2" — для ссылок на файлы релиза
+
+	// Установка обновления из окна.
+	Busy     bool   `json:"busy"`
+	Progress int    `json:"progress"` // 0..100
+	Error    string `json:"error"`
 }
 
 var tagRe = regexp.MustCompile(`^v?\d+(\.\d+){1,3}$`)
@@ -81,7 +87,7 @@ func checkAppUpdate(ctx context.Context) (AppUpdate, error) {
 	if zapret.CompareVersions(tag, appVersion) <= 0 {
 		return AppUpdate{}, nil
 	}
-	return AppUpdate{Version: strings.TrimPrefix(tag, "v"), URL: page}, nil
+	return AppUpdate{Version: strings.TrimPrefix(tag, "v"), URL: page, Tag: tag}, nil
 }
 
 // watchAppUpdates — первая проверка через минуту после старта (не мешаем
@@ -100,6 +106,10 @@ func (a *App) watchAppUpdates() {
 			continue // нет сети или GitHub недоступен — спросим позже
 		}
 		a.mu.Lock()
+		if a.appUpdate.Busy { // идёт установка — не мешаем
+			a.mu.Unlock()
+			continue
+		}
 		changed := a.appUpdate.Version != u.Version
 		a.appUpdate = u
 		a.mu.Unlock()

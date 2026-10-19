@@ -50,7 +50,15 @@ function render(s) {
   $("adminNote").hidden = s.admin;
   const up = s.update || {};
   $("updateNote").hidden = !up.version;
-  $("updateText").textContent = up.version ? t("Доступна версия {x}", up.version) : "";
+  $("updateNote").classList.toggle("warn", !!up.error);
+  $("updateText").textContent = !up.version ? ""
+    : up.busy ? t("Обновляю до {x}… {y}%", up.version, up.progress || 0)
+    : up.error ? up.error
+    : t("Доступна версия {x}", up.version);
+  $("updateBtn").hidden = !!up.busy;
+  $("updateBtn").textContent = t(up.error ? "Ещё раз" : "Обновить");
+  $("updatePage").hidden = !!up.busy;
+  $("updatePage").textContent = t(up.error ? "Скачать вручную" : "Что нового");
   $("conflictNote").hidden = !s.conflict;
   $("conflictNote").textContent = s.conflict
     ? t("Работает другой VPN — «{x}». Выключите его: два VPN мешают друг другу, и сайты не грузятся.", s.conflict)
@@ -505,7 +513,8 @@ $("sendHwid").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetSendHWID(e.target.checked);
   if (r) alert(r);
 }));
-$("updateBtn").addEventListener("click", () => api().OpenAppUpdate());
+$("updateBtn").addEventListener("click", () => api().InstallAppUpdate());
+$("updatePage").addEventListener("click", () => api().OpenAppUpdate());
 $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
 
 // обход
@@ -540,6 +549,11 @@ $("uninstall").addEventListener("click", async () => {
   if (!confirm(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную."))) return;
   const r = await api().Uninstall();
   if (r) alert(r);
+});
+$("copyReport").addEventListener("click", async () => {
+  await window.runtime.ClipboardSetText(await api().SupportReport());
+  $("copyReportLabel").textContent = t("Скопировано");
+  setTimeout(() => { $("copyReportLabel").textContent = ""; }, 2500);
 });
 $("quit").addEventListener("click", () => api().Quit());
 
