@@ -461,7 +461,7 @@ $("modVpn").addEventListener("click", (e) => { if (!e.target.closest(".switch"))
 $("modTg").addEventListener("click", (e) => { if (!e.target.closest(".switch")) openSection("viewTg", "viewMain"); });
 $("swZapret").addEventListener("change", (e) => offOrGuarded(e.target.checked, () => api().SetZapret(e.target.checked)));
 $("swVpn").addEventListener("change", (e) => offOrGuarded(e.target.checked, () => api().SetVPN(e.target.checked)));
-$("swTg").addEventListener("change", (e) => guarded(async () => { const r = await api().SetTelegram(e.target.checked); if (r) alert(r); }));
+$("swTg").addEventListener("change", (e) => guarded(async () => { const r = await api().SetTelegram(e.target.checked); if (r) notify(r); }));
 $("tgConnect").addEventListener("click", () => guarded(async () => { $("tgErr").textContent = await api().ConnectTelegram(); }));
 $("tgCopy").addEventListener("click", async () => {
   const link = await api().TelegramLink();
@@ -490,12 +490,12 @@ $("subAdd").addEventListener("click", () => guarded(async () => {
 }));
 $("subCancel").addEventListener("click", () => { addMode = false; $("subErr").textContent = ""; render(S); });
 $("subRefresh").addEventListener("click", () => guarded(() => api().RefreshSubscription()));
-$("subRemove").addEventListener("click", () => {
+$("subRemove").addEventListener("click", async () => {
   const v = S.vpn;
   const cur = (v.subs || []).find((x) => x.active);
   const name = cur ? "«" + cur.title + "»" : "";
   const rest = t((v.subs || []).length > 1 ? "VPN переключится на другую подписку." : "VPN отключится.");
-  if (confirm(t("Удалить подписку {x}? {y}", name, rest))) api().RemoveSubscription(v.activeSub);
+  if (await ask(t("Удалить подписку {x}? {y}", name, rest), { ok: t("Удалить"), danger: true })) api().RemoveSubscription(v.activeSub);
 });
 $("subSupport").addEventListener("click", () => api().OpenURL(S.vpn.info.supportUrl));
 $("subWeb").addEventListener("click", () => api().OpenURL(S.vpn.info.webPage));
@@ -511,17 +511,17 @@ $("pingBtn").addEventListener("click", async () => {
 });
 $("sendHwid").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetSendHWID(e.target.checked);
-  if (r) alert(r);
+  if (r) notify(r);
 }));
 $("updateBtn").addEventListener("click", () => api().InstallAppUpdate());
 $("updatePage").addEventListener("click", () => api().OpenAppUpdate());
 $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
 
 // обход
-$("pickBtn").addEventListener("click", () => {
+$("pickBtn").addEventListener("click", async () => {
   if (S && S.pick && S.pick.running) { api().StopPickStrategy(); return; }
   if (S && ["running", "starting"].includes(S.vpn.status) &&
-      !confirm(t("Для подбора нужен обход — VPN будет выключен. Продолжить?"))) return;
+      !(await ask(t("Для подбора нужен обход — VPN будет выключен. Продолжить?"), { ok: t("Продолжить") }))) return;
   api().AutoPickStrategy();
 });
 $("recheck").addEventListener("click", () => api().RunChecks());
@@ -542,13 +542,13 @@ for (const b of $("lang").children) b.addEventListener("click", () => setLang(b.
 $("openLogs").addEventListener("click", () => api().OpenLogsFolder());
 $("autostart").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetAutostart(e.target.checked);
-  if (r) { alert(r); if (S) render(S); }
+  if (r) { notify(r); if (S) render(S); }
 }));
 $("licenses").addEventListener("click", () => api().OpenLicenses());
 $("uninstall").addEventListener("click", async () => {
-  if (!confirm(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную."))) return;
+  if (!(await ask(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную."), { ok: t("Удалить"), danger: true }))) return;
   const r = await api().Uninstall();
-  if (r) alert(r);
+  if (r) notify(r);
 });
 $("copyReport").addEventListener("click", async () => {
   await window.runtime.ClipboardSetText(await api().SupportReport());
@@ -615,3 +615,38 @@ $("listSave").addEventListener("click", () => guarded(async () => {
   st.className = "list-status ok";
   $("listText").value = await api().GetUserList(listID); // как записалось после проверки
 }));
+
+// ---------------- диалоги ----------------
+// Свои вместо alert()/confirm(): системные окна WebView2 выглядят чужими
+// («wails.localhost says») и обрезают текст.
+
+function ask(text, opts = {}) {
+  const { ok = t("ОК"), cancel = t("Отмена"), danger = false } = opts;
+  const dlg = $("dialog");
+  $("dlgText").textContent = text;
+  const okB = $("dlgOk"), noB = $("dlgCancel");
+  okB.textContent = ok;
+  okB.className = "btn " + (danger ? "danger-btn" : "primary");
+  noB.hidden = cancel === null;
+  noB.textContent = cancel || "";
+  dlg.hidden = false;
+  okB.focus();
+  return new Promise((resolve) => {
+    const done = (v) => {
+      dlg.hidden = true;
+      okB.onclick = noB.onclick = dlg.onclick = null;
+      document.removeEventListener("keydown", key, true);
+      resolve(v);
+    };
+    const key = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); done(false); }
+      if (e.key === "Enter") { e.preventDefault(); done(true); }
+    };
+    okB.onclick = () => done(true);
+    noB.onclick = () => done(false);
+    dlg.onclick = (e) => { if (e.target === dlg) done(false); };
+    document.addEventListener("keydown", key, true);
+  });
+}
+
+const notify = (text) => ask(text, { cancel: null });

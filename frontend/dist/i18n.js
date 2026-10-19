@@ -78,6 +78,8 @@ const EN = {
   "Ссылка из бота или личного кабинета. Подходят Remnawave, Marzban, 3x-ui, а также ссылки vless://, vmess://, trojan://, ss://, hysteria2://":
     "A link from your bot or dashboard. Remnawave, Marzban, 3x-ui and vless://, vmess://, trojan://, ss://, hysteria2:// links are supported",
   "Отмена": "Cancel",
+  "ОК": "OK",
+  "Продолжить": "Continue",
   "Вставить": "Paste",
   "Добавить": "Add",
   "Загружаю…": "Loading…",
