@@ -354,6 +354,7 @@ function renderSettings(s) {
   $("navZapret").textContent = $("zapretSub").textContent;
   $("navVpn").textContent = $("vpnSub").textContent;
   $("navTg").textContent = $("tgSub").textContent;
+  CUSTOM = s.config.customTheme || null;
   applyTheme(s.config.theme || "system");
   const lang = s.config.lang === "en" ? "en" : "ru";
   if (lang !== LANG) setLang(lang, false);
@@ -391,14 +392,114 @@ function renderPickList(pk, current) {
   for (const li of ul.children) li.classList.toggle("sel", li.dataset.name === current);
 }
 
-// Тема: "system" — по Windows, "light"/"dark" — принудительно.
+// Тема: system/light/dark — из style.css; готовые и своя — палитры (themes.js).
+let CUSTOM = null; // своя палитра из настроек
+
 function applyTheme(th) {
-  const root = document.documentElement;
-  if (th === "light" || th === "dark") root.dataset.theme = th;
-  else delete root.dataset.theme;
-  try { localStorage.setItem("theme", th); } catch (e) {}
-  for (const b of $("theme").children) b.classList.toggle("sel", b.dataset.v === th);
+  const p = paletteFor(th, CUSTOM);
+  applyPalette(th, p);
+  try {
+    localStorage.setItem("theme", th);
+    if (p) localStorage.setItem("themeVars", JSON.stringify({ scheme: p.scheme, vars: themeVars(p) }));
+    else localStorage.removeItem("themeVars");
+  } catch (e) {}
+  renderThemeGrid(th);
 }
+
+// Сетка тем: плитка-превью для каждой.
+const BUILTIN = [
+  { id: "system", name: "Как в системе" },
+  { id: "light", name: "Светлая", p: BASE_LIGHT },
+  { id: "dark", name: "Тёмная", p: BASE_DARK },
+];
+function renderThemeGrid(cur) {
+  const box = $("theme");
+  const items = BUILTIN.concat(Object.entries(THEMES).map(([id, p]) => ({ id, name: p.name, p })));
+  if (validPalette(CUSTOM)) items.push({ id: "custom", name: "Своя", p: CUSTOM });
+  const sig = items.map((x) => x.id).join("|") + LANG + JSON.stringify(CUSTOM);
+  if (box.dataset.sig !== sig) {
+    box.innerHTML = "";
+    for (const it of items) {
+      const b = document.createElement("button");
+      b.className = "theme-tile";
+      b.dataset.v = it.id;
+      const sw = document.createElement("span");
+      sw.className = "tt-sw";
+      if (it.p) {
+        sw.style.background = it.p.bg;
+        sw.innerHTML = "<i></i><i></i><i></i>";
+        sw.children[0].style.background = it.p.surface;
+        sw.children[1].style.background = it.p.accent;
+        sw.children[2].style.background = it.p.on;
+      } else {
+        sw.classList.add("tt-system");
+      }
+      const nm = document.createElement("span");
+      nm.className = "tt-name";
+      nm.textContent = t(it.name);
+      b.append(sw, nm);
+      b.addEventListener("click", () => { applyTheme(it.id); api().SetTheme(it.id); });
+      box.appendChild(b);
+    }
+    box.dataset.sig = sig;
+  }
+  for (const b of box.children) b.classList.toggle("sel", b.dataset.v === cur);
+}
+
+// ---- редактор своей темы ----
+const COLOR_LABELS = {
+  bg: "Фон", surface: "Карточки", text: "Текст", muted: "Второстепенный текст",
+  accent: "Акцент", on: "Успех", bad: "Ошибка", warn: "Предупреждение",
+};
+let draft = null;
+
+function openThemeEditor() {
+  const cur = (S && S.config && S.config.theme) || "system";
+  const base = paletteFor(cur, CUSTOM) ||
+    (document.documentElement.dataset.theme === "light" || (cur === "system" && !matchMedia("(prefers-color-scheme: dark)").matches) ? BASE_LIGHT : BASE_DARK);
+  draft = { ...base };
+  delete draft.name;
+  renderThemeEditor();
+  show("viewTheme");
+}
+
+function renderThemeEditor() {
+  for (const b of $("themeScheme").children) b.classList.toggle("sel", b.dataset.v === draft.scheme);
+  const from = $("themeFrom");
+  if (!from.dataset.built) {
+    const src = [["Светлая", BASE_LIGHT], ["Тёмная", BASE_DARK]].concat(Object.values(THEMES).map((p) => [p.name, p]));
+    for (const [name, p] of src) {
+      const c = document.createElement("button");
+      c.className = "chip";
+      c.textContent = t(name);
+      c.addEventListener("click", () => { draft = { ...p }; delete draft.name; renderThemeEditor(); });
+      from.appendChild(c);
+    }
+    from.dataset.built = "1";
+  }
+  const list = $("themeColors");
+  if (!list.dataset.built) {
+    for (const k of THEME_KEYS) {
+      const row = document.createElement("label");
+      row.className = "item color-row";
+      row.innerHTML = '<span></span><span class="color-val"><code></code><input type="color"></span>';
+      row.firstChild.textContent = t(COLOR_LABELS[k]);
+      const inp = row.querySelector("input");
+      inp.dataset.k = k;
+      inp.addEventListener("input", () => { draft[k] = inp.value.toLowerCase(); renderThemeEditor(); });
+      list.appendChild(row);
+    }
+    list.dataset.built = "1";
+  }
+  for (const inp of list.querySelectorAll("input")) {
+    inp.value = draft[inp.dataset.k];
+    inp.parentElement.querySelector("code").textContent = draft[inp.dataset.k];
+  }
+  // Превью — в цветах черновика, не трогая само окно.
+  const pv = $("themePreview"), vars = themeVars(draft);
+  for (const k in vars) pv.style.setProperty(k, vars[k]);
+}
+
 
 // setLang переключает язык: разметка переводится сразу, остальное —
 // повторной отрисовкой из последнего состояния.
@@ -568,7 +669,19 @@ $("checkUpd").addEventListener("click", async () => {
 });
 
 // настройки приложения
-for (const b of $("theme").children) b.addEventListener("click", () => { applyTheme(b.dataset.v); api().SetTheme(b.dataset.v); });
+$("themeEdit").addEventListener("click", openThemeEditor);
+for (const b of $("themeScheme").children) b.addEventListener("click", () => { draft.scheme = b.dataset.v; renderThemeEditor(); });
+$("themeSave").addEventListener("click", () => guarded(async () => {
+  if (!validPalette(draft)) return;
+  const p = { scheme: draft.scheme };
+  for (const k of THEME_KEYS) p[k] = draft[k];
+  const r = await api().SetCustomTheme(p);
+  if (r) { notify(r); return; }
+  CUSTOM = p;
+  if (S) { S.config.customTheme = p; S.config.theme = "custom"; }
+  applyTheme("custom");
+  show("viewSettings");
+}));
 for (const b of $("lang").children) b.addEventListener("click", () => setLang(b.dataset.v, true));
 $("openLogs").addEventListener("click", () => api().OpenLogsFolder());
 $("autostart").addEventListener("change", (e) => guarded(async () => {

@@ -6,7 +6,12 @@
   <title>Починка</title>
   <script>
     // Тема до первой отрисовки — без вспышки другого цвета.
-    try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+    try {
+      const r = document.documentElement, t = localStorage.getItem("theme");
+      const v = JSON.parse(localStorage.getItem("themeVars") || "null");
+      if (t === "light" || t === "dark") r.dataset.theme = t;
+      if (v && v.scheme && v.vars) { r.dataset.theme = v.scheme; for (const k in v.vars) if (/^--[a-z]+$/.test(k)) r.style.setProperty(k, String(v.vars[k])); }
+    } catch (e) {}
   </script>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -257,10 +262,9 @@
       </div>
 
       <div class="group-title">Тема</div>
-      <div class="segmented three" id="theme">
-        <button data-v="system">Как в системе</button>
-        <button data-v="light">Светлая</button>
-        <button data-v="dark">Тёмная</button>
+      <div class="theme-grid" id="theme"></div>
+      <div class="list" style="margin-top:8px">
+        <button class="item" id="themeEdit"><span class="two">Своя тема<small>подобрать цвета самому</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
       </div>
 
       <div class="group-title">Язык</div>
@@ -297,6 +301,40 @@
     </div>
   </section>
 
+  <!-- ================= Редактор своей темы ================= -->
+  <section class="view" id="viewTheme" hidden>
+    <div class="vhead">
+      <button class="back" data-back="viewSettings"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>Своя тема</span>
+    </div>
+    <div class="scroll">
+      <div class="theme-preview" id="themePreview">
+        <div class="tp-card">
+          <div class="tp-title">Подключено</div>
+          <div class="tp-sub">Второстепенный текст</div>
+          <div class="tp-row"><span class="tp-dot on"></span>открывается<span class="tp-dot bad"></span>ошибка<span class="tp-dot warn"></span>внимание</div>
+          <span class="tp-btn">Кнопка</span>
+        </div>
+      </div>
+
+      <div class="group-title">Основа</div>
+      <div class="segmented two" id="themeScheme">
+        <button data-v="dark">Тёмная</button>
+        <button data-v="light">Светлая</button>
+      </div>
+
+      <div class="group-title">Взять цвета из</div>
+      <div class="chips-row" id="themeFrom"></div>
+
+      <div class="group-title">Цвета</div>
+      <div class="list" id="themeColors"></div>
+
+      <div class="add-actions">
+        <button class="btn primary" id="themeSave">Применить</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= Журнал ================= -->
   <section class="view" id="viewLog" hidden>
     <div class="vhead">
@@ -318,6 +356,7 @@
   </div>
 
   <script src="i18n.js"></script>
+  <script src="themes.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

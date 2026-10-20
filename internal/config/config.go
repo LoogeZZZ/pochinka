@@ -44,6 +44,8 @@ type Config struct {
 
 	// Theme — тема окна: system | light | dark.
 	Theme string `json:"theme"`
+	// CustomTheme — своя палитра (scheme + 8 цветов #rrggbb), см. themes.go.
+	CustomTheme map[string]string `json:"customTheme,omitempty"`
 
 	// Lang — язык интерфейса: ru | en (пусто — русский).
 	Lang string `json:"lang"`

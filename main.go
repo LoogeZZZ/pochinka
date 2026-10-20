@@ -113,7 +113,11 @@ func hasArg(a string) bool {
 func windowBackground() *options.RGBA {
 	dark := &options.RGBA{R: 17, G: 18, B: 20, A: 255}
 	light := &options.RGBA{R: 244, G: 245, B: 247, A: 255}
-	switch config.Load().Theme {
+	cfg := config.Load()
+	if bg := themeBackground(cfg); bg != nil {
+		return bg
+	}
+	switch cfg.Theme {
 	case "dark":
 		return dark
 	case "light":

@@ -467,17 +467,6 @@ func (a *App) SetGameEnabled(id string, on bool) string {
 	return ""
 }
 
-// SetTheme: system | light | dark.
-func (a *App) SetTheme(theme string) {
-	switch theme {
-	case "light", "dark", "system":
-	default:
-		return
-	}
-	_, _ = config.Update(func(c *config.Config) { c.Theme = theme })
-	a.emitState()
-}
-
 // SetLanguage: ru | en. Журнал и сообщения бэкенда остаются на русском.
 func (a *App) SetLanguage(lang string) {
 	if lang != "ru" && lang != "en" {
