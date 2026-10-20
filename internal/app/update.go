@@ -41,25 +41,50 @@ func (a *App) watchAppUpdates() {
 		case <-time.After(delay):
 		}
 		delay = 6 * time.Hour
-		r, err := selfupdate.Check(a.ctx, Version)
-		if err != nil {
-			continue // нет сети или GitHub недоступен — спросим позже
-		}
-		a.mu.Lock()
-		if a.appUpdate.Busy { // идёт установка — не мешаем
-			a.mu.Unlock()
-			continue
-		}
-		changed := a.appUpdate.Version != r.Version
-		a.appUpdate = AppUpdate{Version: r.Version, URL: r.URL, Tag: r.Tag}
-		a.mu.Unlock()
-		if changed {
-			if r.Version != "" {
-				applog.Printf("доступна новая версия Починки: %s", r.Version)
-			}
-			a.emitState()
-		}
+		_, _ = a.checkAppUpdate() // нет сети или GitHub недоступен — спросим позже
 	}
+}
+
+// checkAppUpdate спрашивает GitHub и обновляет плашку. Возвращает новую
+// версию ("" — уже последняя).
+func (a *App) checkAppUpdate() (string, error) {
+	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+	defer cancel()
+	r, err := selfupdate.Check(ctx, Version)
+	if err != nil {
+		return "", err
+	}
+	a.mu.Lock()
+	if a.appUpdate.Busy { // идёт установка — не мешаем
+		a.mu.Unlock()
+		return r.Version, nil
+	}
+	changed := a.appUpdate.Version != r.Version
+	a.appUpdate = AppUpdate{Version: r.Version, URL: r.URL, Tag: r.Tag}
+	a.mu.Unlock()
+	if changed {
+		if r.Version != "" {
+			applog.Printf("доступна новая версия Починки: %s", r.Version)
+		}
+		a.emitState()
+	}
+	return r.Version, nil
+}
+
+// UpdateCheck — ответ кнопки «Проверить обновления».
+type UpdateCheck struct {
+	Version string `json:"version"` // новая версия; пусто — обновлений нет
+	Error   string `json:"error"`
+}
+
+// CheckAppUpdate — кнопка «Проверить обновления» в настройках.
+func (a *App) CheckAppUpdate() UpdateCheck {
+	v, err := a.checkAppUpdate()
+	if err != nil {
+		applog.Printf("проверка обновлений: %v", err)
+		return UpdateCheck{Error: err.Error()}
+	}
+	return UpdateCheck{Version: v}
 }
 
 // OpenAppUpdate — открыть страницу новой версии.

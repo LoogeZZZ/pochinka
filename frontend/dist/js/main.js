@@ -143,6 +143,18 @@ $("autostart").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetAutostart(e.target.checked);
   if (r) { notify(r); if (S) render(S); }
 }));
+$("checkUpdate").addEventListener("click", () => guarded(async () => {
+  const label = $("checkUpdateLabel");
+  label.textContent = t("Проверяю…");
+  const r = await api().CheckAppUpdate();
+  label.textContent = "";
+  if (r.error) return notify(t("Не удалось проверить обновления: {x}", r.error));
+  if (!r.version) return notify(t("У вас последняя версия: {x}", S ? S.version : ""));
+  if (await ask(t("Доступна версия {x}. Обновить сейчас?", r.version), { ok: t("Обновить"), cancel: t("Позже") })) {
+    show("viewMain");
+    api().InstallAppUpdate();
+  }
+}));
 $("licenses").addEventListener("click", () => api().OpenLicenses());
 $("uninstall").addEventListener("click", async () => {
   if (!(await ask(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную."), { ok: t("Удалить"), danger: true }))) return;
