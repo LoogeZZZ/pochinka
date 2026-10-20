@@ -95,3 +95,71 @@ func TestUserRulesProcess(t *testing.T) {
 		t.Errorf("программа %s в «через VPN», а её соединение ушло напрямую", filepath.Base(exe))
 	}
 }
+
+func TestPatternRule(t *testing.T) {
+	cases := map[string]string{
+		"yandex.*":             `regexp:^yandex\..*$`,
+		"*.yandex.*":           `regexp:^(.+\.)?yandex\..*$`,
+		"img*.example.com":     `regexp:^img.*\.example\.com$`,
+		`regexp:^a\d+\.b\.ru$`: `regexp:^a\d+\.b\.ru$`,
+		`/yandex\.(ru|com)$/`:  `regexp:yandex\.(ru|com)$`,
+		"keyword:Yandex":       "keyword:yandex",
+		"*.yandex.ru":          "", // обычный домен, не шаблон
+		"regexp:(":             "", // неверный — пропуск
+		"keyword:":             "",
+		"a b*.com":             "",
+	}
+	for in, want := range cases {
+		got, ok := patternRule(in)
+		if want == "" {
+			if ok {
+				t.Errorf("%q: ожидали «не шаблон», получили %q", in, got)
+			}
+			continue
+		}
+		if !ok || got != want {
+			t.Errorf("%q → %q (%v), want %q", in, got, ok, want)
+		}
+	}
+	// В общем разборе шаблоны и домены живут вместе.
+	r := ParseUserRules("*.yandex.ru\nyandex.*\nkeyword:vk\n")
+	if strings.Join(r.Domains, ",") != `domain:yandex.ru,keyword:vk,regexp:^yandex\..*$` {
+		t.Fatalf("domains %v", r.Domains)
+	}
+}
+
+// Шаблон и регулярка реально уводят трафик в VPN.
+func TestUserPatternsRouting(t *testing.T) {
+	geo := os.Getenv("GEO_TEST_DIR")
+	if geo == "" {
+		t.Skip("GEO_TEST_DIR не задан")
+	}
+	SetAssetDir(geo)
+	const uuid = "11111111-2222-3333-4444-555555555555"
+	seen := startVlessSniffer(t, "127.0.0.1:39447")
+	s, _ := ParseLink("vless://" + uuid + "@127.0.0.1:39447?type=tcp&security=none#local")
+	client, err := BuildConfig(BuildOptions{
+		Servers: []*Server{s}, Mode: ModeProxy, HTTPPort: 39024, SocksPort: 39025,
+		LogFile:   filepath.Join(t.TempDir(), "c3.log"),
+		UserProxy: ParseUserRules("examp*.org\n" + `regexp:^api\d+\.test\.net$` + "\n"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	startXray(t, client)
+	for _, h := range []string{"example.org", "api42.test.net", "api.test.net", "example.com"} {
+		connect(t, "127.0.0.1:39024", h+":443")
+	}
+	time.Sleep(500 * time.Millisecond)
+	log := seen()
+	for _, h := range []string{"example.org", "api42.test.net"} {
+		if !strings.Contains(log, h+":443") {
+			t.Errorf("%s подходит под шаблон, но ушёл напрямую", h)
+		}
+	}
+	for _, h := range []string{"api.test.net", "example.com"} {
+		if strings.Contains(log, h+":443") {
+			t.Errorf("%s не подходит под шаблоны, но ушёл в VPN", h)
+		}
+	}
+}

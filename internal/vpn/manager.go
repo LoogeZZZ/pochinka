@@ -796,11 +796,18 @@ func DomainRules(text string) []string {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+		if rule, ok := patternRule(line); ok {
+			if !seen[rule] {
+				seen[rule] = true
+				out = append(out, rule)
+			}
+			continue
+		}
 		kind, value := "domain:", strings.ToLower(line)
 		if rest, ok := strings.CutPrefix(value, "^"); ok {
 			kind, value = "full:", rest
 		}
-		value = strings.Trim(value, ".")
+		value = strings.Trim(strings.TrimPrefix(value, "*."), ".") // «*.x.ru» = x.ru с поддоменами
 		// Только похожее на домен: буквы (в т.ч. кириллица), цифры, точка,
 		// дефис, подчёркивание. Пустое ("^") или мусор xray отверг бы, и VPN
 		// не запустился бы из-за одной кривой строки.

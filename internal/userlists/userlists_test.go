@@ -80,3 +80,29 @@ func TestSaveMixed(t *testing.T) {
 		}
 	}
 }
+
+func TestPatterns(t *testing.T) {
+	isolate(t)
+	v, _ := Get("vpn-sites")
+	in := "yandex.*\n*.yandex.*\n" + `regexp:^a\d+\.ru$` + "\n" + `/x\.(ru|com)$/` + "\nkeyword:Yandex\n*.mail.ru\n"
+	if _, err := v.Save(in); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := v.Read()
+	want := "yandex.*\n*.yandex.*\n" + `regexp:^a\d+\.ru$` + "\n" + `regexp:x\.(ru|com)$` + "\nkeyword:yandex\nmail.ru\n"
+	if got != want {
+		t.Fatalf("got %q", got)
+	}
+	for _, bad := range []string{"regexp:(", "keyword:", "**", "a b*.ru"} {
+		if _, err := v.Save(bad + "\n"); err == nil || !strings.Contains(err.Error(), "строка 1") {
+			t.Errorf("%q: %v", bad, err)
+		}
+	}
+	z, _ := Get("zapret-include")
+	if _, err := z.Save("yandex.*\n"); err == nil || !strings.Contains(err.Error(), "zapret") {
+		t.Fatalf("в списке обхода шаблон должен отклоняться с пояснением: %v", err)
+	}
+	if _, err := z.Save("*.yandex.ru\n"); err != nil {
+		t.Fatalf("«*.» в начале в списке обхода можно: %v", err)
+	}
+}

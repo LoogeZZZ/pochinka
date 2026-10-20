@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -118,8 +119,14 @@ func (l List) Save(text string) (int, error) {
 			out = append(out, clean(line))
 			continue
 		}
+		if l.Kind == Domains && IsPattern(line) {
+			return 0, fmt.Errorf("строка %d: «%s» — в списках обхода шаблоны не работают: zapret понимает только домены (поддомены учитываются сами, «*.» в начале можно)", i+1, clip(line, 60))
+		}
 		v, ok := normalize(l.Kind, line)
 		if !ok {
+			if l.Kind == Mixed && IsPattern(line) {
+				return 0, fmt.Errorf("строка %d: «%s» — неверный шаблон (примеры: yandex.*, regexp:^img\\d+\\.example\\.com$, keyword:yandex)", i+1, clip(line, 60))
+			}
 			what := "домен"
 			switch l.Kind {
 			case IPs:
@@ -153,6 +160,9 @@ func normalize(k Kind, s string) (string, bool) {
 		if v, ok := normalize(IPs, s); ok {
 			return v, true
 		}
+		if IsPattern(s) {
+			return normalizePattern(s)
+		}
 		return normalize(Domains, s)
 	}
 	if k == IPs {
@@ -182,6 +192,60 @@ func normalize(k Kind, s string) (string, bool) {
 		return "^" + d, true
 	}
 	return d, true
+}
+
+// IsPattern — шаблон домена, а не сам домен: regexp:…, /…/, keyword:… или
+// звёздочка не только в начале («*.yandex.ru» — обычный домен с
+// поддоменами). Шаблоны понимает xray (списки VPN), но не zapret.
+func IsPattern(s string) bool {
+	l := strings.ToLower(s)
+	if strings.HasPrefix(l, "regexp:") || strings.HasPrefix(l, "keyword:") ||
+		(len(s) > 2 && strings.HasPrefix(s, "/") && strings.HasSuffix(s, "/")) {
+		return true
+	}
+	return strings.Contains(strings.TrimPrefix(s, "*."), "*")
+}
+
+const maxPattern = 512
+
+// normalizePattern проверяет шаблон и приводит к виду, который потом
+// понимает vpn.DomainRules: regexp:… (проверено компиляцией), keyword:…,
+// или домен со звёздочками.
+func normalizePattern(s string) (string, bool) {
+	if len(s) > maxPattern {
+		return "", false
+	}
+	l := strings.ToLower(s)
+	switch {
+	case strings.HasPrefix(l, "regexp:") || strings.HasPrefix(s, "/"):
+		re := s
+		if strings.HasPrefix(l, "regexp:") {
+			re = s[len("regexp:"):]
+		} else {
+			re = s[1 : len(s)-1]
+		}
+		if strings.TrimSpace(re) == "" {
+			return "", false
+		}
+		if _, err := regexp.Compile(re); err != nil {
+			return "", false
+		}
+		return "regexp:" + re, true
+	case strings.HasPrefix(l, "keyword:"):
+		w := strings.ToLower(strings.TrimSpace(s[len("keyword:"):]))
+		if w == "" || !isDomain(strings.Trim(w, ".-")) {
+			return "", false
+		}
+		return "keyword:" + w, true
+	}
+	g := strings.ToLower(strings.TrimSuffix(s, "."))
+	if strings.Contains(g, "**") || strings.Trim(g, "*.") == "" {
+		return "", false
+	}
+	if !isDomain(strings.ReplaceAll(g, "*", "x")) {
+		return "", false
+	}
+	return g, true
 }
 
 // IsProgram — строка про программу: имя файла .exe (как в Диспетчере задач).

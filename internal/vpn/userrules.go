@@ -2,6 +2,7 @@ package vpn
 
 import (
 	"net/netip"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -77,4 +78,58 @@ func readUserRules(id string) UserRules {
 		return UserRules{}
 	}
 	return ParseUserRules(text)
+}
+
+// patternRule — шаблон домена в правило xray. ok=false — это не шаблон
+// (или шаблон неверный — тогда строку пропускаем: из-за одной кривой строки
+// VPN не должен перестать запускаться).
+//
+//	regexp:<re>, /<re>/ → regexp:<re> (синтаксис Go, как в xray)
+//	keyword:<слово>     → keyword:<слово>
+//	yandex.*, a*b.com   → regexp:^…$ (звёздочка — любые символы);
+//	                      «*.» в начале — «сам домен или любой поддомен»
+func patternRule(line string) (string, bool) {
+	l := strings.ToLower(line)
+	switch {
+	case strings.HasPrefix(l, "regexp:"):
+		return regexpRule(line[len("regexp:"):])
+	case len(line) > 2 && strings.HasPrefix(line, "/") && strings.HasSuffix(line, "/"):
+		return regexpRule(line[1 : len(line)-1])
+	case strings.HasPrefix(l, "keyword:"):
+		w := strings.TrimSpace(l[len("keyword:"):])
+		if !looksLikeDomain(w) {
+			return "", false
+		}
+		return "keyword:" + w, true
+	}
+	rest := strings.TrimPrefix(l, "*.")
+	if !strings.Contains(rest, "*") {
+		return "", false
+	}
+	if !looksLikeDomain(strings.ReplaceAll(rest, "*", "x")) {
+		return "", false
+	}
+	var b strings.Builder
+	b.WriteString("^")
+	if strings.HasPrefix(l, "*.") {
+		b.WriteString(`(.+\.)?`)
+	}
+	for i, part := range strings.Split(rest, "*") {
+		if i > 0 {
+			b.WriteString(".*")
+		}
+		b.WriteString(regexp.QuoteMeta(part))
+	}
+	b.WriteString("$")
+	return regexpRule(b.String())
+}
+
+func regexpRule(re string) (string, bool) {
+	if strings.TrimSpace(re) == "" || len(re) > 512 {
+		return "", false
+	}
+	if _, err := regexp.Compile(re); err != nil {
+		return "", false
+	}
+	return "regexp:" + re, true
 }
