@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func (a *App) SupportReport() string {
 	var b strings.Builder
 	w := func(f string, args ...any) { fmt.Fprintf(&b, f+"\n", args...) }
 
-	w("Починка %s · Windows %d.%d.%d · админ: %v · %s", appVersion, v.MajorVersion, v.MinorVersion, v.BuildNumber,
+	w("Починка %s · Windows %d.%d.%d · админ: %v · %s", Version, v.MajorVersion, v.MinorVersion, v.BuildNumber,
 		st.Admin, time.Now().Format("2006-01-02 15:04"))
 	if st.Conflict != "" {
 		w("Другой VPN: %s", st.Conflict)

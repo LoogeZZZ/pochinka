@@ -15,8 +15,10 @@ import (
 
 	"golang.org/x/sys/windows/registry"
 
+	"pochinka/internal/app"
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
+	"pochinka/internal/install"
 	"pochinka/internal/paths"
 	"pochinka/internal/vpn"
 	"pochinka/internal/winutil"
@@ -25,13 +27,21 @@ import (
 //go:embed all:frontend/dist
 var frontend embed.FS
 
+// Тексты лицензий — в exe (Настройки → Лицензии).
+//
+//go:embed LICENSE
+var licenseText string
+
+//go:embed third_party/THIRD_PARTY_LICENSES.txt
+var thirdPartyText string
+
 func main() {
 	// Без прав администратора — только запускаем себя с правами (через
 	// задачу Планировщика без UAC или один раз через UAC) и выходим.
 	if !winutil.IsAdmin() {
-		launchElevated()
+		install.LaunchElevated()
 	}
-	hardenEnv() // до первого обращения к путям и до WebView2
+	install.HardenEnv() // до первого обращения к путям и до WebView2
 	if err := paths.Ensure(); err != nil {
 		os.Exit(1)
 	}
@@ -62,15 +72,16 @@ func main() {
 	// wails.Run: если уже работает старый экземпляр, этот сразу выйдет.
 	// Работаем всегда из установленной копии: ей одной можно класть рядом
 	// wintun.dll (TUN) — в её папку без прав администратора не записать.
-	if ensureInstalled() && !paths.RunningInstalled() && len(os.Args) == 1 {
-		if _, err := schtasks("/Run", "/TN", taskOpen); err == nil {
+	if install.EnsureInstalled() && !paths.RunningInstalled() && len(os.Args) == 1 {
+		if _, err := install.Schtasks("/Run", "/TN", install.TaskOpen); err == nil {
 			applog.Printf("перезапуск из установленной копии")
 			applog.Close()
 			return
 		}
 	}
 
-	app := NewApp()
+	a := app.NewApp()
+	app.LicenseText, app.ThirdPartyText = licenseText, thirdPartyText
 	err := wails.Run(&options.App{
 		Title:            "Починка",
 		Width:            360,
@@ -80,14 +91,14 @@ func main() {
 		StartHidden:      hasArg("--minimized"),
 		BackgroundColour: windowBackground(),
 		AssetServer:      &assetserver.Options{Assets: frontend},
-		OnStartup:        app.startup,
-		OnBeforeClose:    app.beforeClose,
-		OnShutdown:       app.shutdown,
-		Bind:             []interface{}{app},
+		OnStartup:        a.Startup,
+		OnBeforeClose:    a.BeforeClose,
+		OnShutdown:       a.Shutdown,
+		Bind:             []interface{}{a},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "pochinka-7f3e2a91-zapret-tg",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) {
-				app.showWindow()
+				a.ShowWindow()
 			},
 		},
 		Windows: &windows.Options{
@@ -114,7 +125,7 @@ func windowBackground() *options.RGBA {
 	dark := &options.RGBA{R: 17, G: 18, B: 20, A: 255}
 	light := &options.RGBA{R: 244, G: 245, B: 247, A: 255}
 	cfg := config.Load()
-	if bg := themeBackground(cfg); bg != nil {
+	if bg := app.ThemeBackground(cfg); bg != nil {
 		return bg
 	}
 	switch cfg.Theme {

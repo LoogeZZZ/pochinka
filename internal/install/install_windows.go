@@ -1,4 +1,6 @@
-package main
+// Package install — установка в Program Files, запуск без UAC, автозапуск,
+// удаление и замена exe при обновлении.
+package install
 
 import (
 	"bytes"
@@ -33,14 +35,14 @@ import (
 //     (новый exe отличается от копии в Program Files);
 //   - автозапуск — вторая задача «Pochinka» на вход в Windows.
 const (
-	taskAutostart = "Pochinka"
-	taskOpen      = "PochinkaOpen"
+	TaskAutostart = "Pochinka"
+	TaskOpen      = "PochinkaOpen"
 )
 
-// installedExe — путь копии (см. paths.InstalledExe).
-func installedExe() (string, error) { return paths.InstalledExe() }
+// InstalledExe — путь копии (см. paths.InstalledExe).
+func InstalledExe() (string, error) { return paths.InstalledExe() }
 
-func systemDir() string {
+func SystemDir() string {
 	d, err := windows.GetSystemDirectory()
 	if err != nil {
 		return `C:\Windows\System32`
@@ -48,18 +50,18 @@ func systemDir() string {
 	return d
 }
 
-func schtasks(args ...string) ([]byte, error) {
-	cmd := exec.Command(filepath.Join(systemDir(), "schtasks.exe"), args...)
+func Schtasks(args ...string) ([]byte, error) {
+	cmd := exec.Command(filepath.Join(SystemDir(), "Schtasks.exe"), args...)
 	cmd.SysProcAttr = &windows.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
 	return cmd.CombinedOutput()
 }
 
-func taskExists(name string) bool {
-	_, err := schtasks("/Query", "/TN", name)
+func TaskExists(name string) bool {
+	_, err := Schtasks("/Query", "/TN", name)
 	return err == nil
 }
 
-func autostartEnabled() bool { return taskExists(taskAutostart) }
+func AutostartEnabled() bool { return TaskExists(TaskAutostart) }
 
 func xmlEscape(s string) string {
 	var b bytes.Buffer
@@ -124,7 +126,7 @@ func currentUserSID() (string, error) {
 // и задача с правами администратора запускала бы чужую программу.
 func registerTask(name, xmlText string) error {
 	u := utf16.Encode([]rune(xmlText))
-	buf := []byte{0xFF, 0xFE} // schtasks ждёт UTF-16 с BOM
+	buf := []byte{0xFF, 0xFE} // Schtasks ждёт UTF-16 с BOM
 	for _, c := range u {
 		buf = append(buf, byte(c), byte(c>>8))
 	}
@@ -140,7 +142,7 @@ func registerTask(name, xmlText string) error {
 	if err != nil {
 		return err
 	}
-	if out, err := schtasks("/Create", "/TN", name, "/XML", f.Name(), "/F"); err != nil {
+	if out, err := Schtasks("/Create", "/TN", name, "/XML", f.Name(), "/F"); err != nil {
 		return fmt.Errorf("планировщик: %s", bytes.TrimSpace(out))
 	}
 	return nil
@@ -150,7 +152,7 @@ func registerTask(name, xmlText string) error {
 // там другой файл (или его нет). Запущенную копию Windows перезаписать не
 // даёт, но переименовать разрешает — старую убираем в .old.
 func syncInstalledCopy() (string, error) {
-	dst, err := installedExe()
+	dst, err := InstalledExe()
 	if err != nil {
 		return "", err
 	}
@@ -216,22 +218,22 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-// ensureInstalled — при каждом запуске с правами: копия в Program Files
+// EnsureInstalled — при каждом запуске с правами: копия в Program Files
 // = этой версии, задача «открыть без UAC» есть. Задачи указывают на
 // неизменный путь копии, поэтому после обновления их перерегистрировать
 // не нужно.
-func ensureInstalled() bool {
+func EnsureInstalled() bool {
 	exe, err := syncInstalledCopy()
 	if err != nil {
 		applog.Printf("установка: не удалось обновить копию: %v", err)
 		return false
 	}
-	if taskExists(taskOpen) {
+	if TaskExists(TaskOpen) {
 		return true
 	}
 	sid, err := currentUserSID()
 	if err == nil {
-		err = registerTask(taskOpen, taskXML(exe, "", sid, false))
+		err = registerTask(TaskOpen, taskXML(exe, "", sid, false))
 	}
 	if err != nil {
 		applog.Printf("установка: запуск без UAC не настроен: %v", err)
@@ -241,7 +243,7 @@ func ensureInstalled() bool {
 	return true
 }
 
-func enableAutostart() error {
+func EnableAutostart() error {
 	exe, err := syncInstalledCopy()
 	if err != nil {
 		return fmt.Errorf("копия в Program Files: %w", err)
@@ -250,41 +252,17 @@ func enableAutostart() error {
 	if err != nil {
 		return err
 	}
-	return registerTask(taskAutostart, taskXML(exe, "--minimized", sid, true))
+	return registerTask(TaskAutostart, taskXML(exe, "--minimized", sid, true))
 }
 
-func disableAutostart() error {
-	if !autostartEnabled() {
+func DisableAutostart() error {
+	if !AutostartEnabled() {
 		return nil
 	}
-	if out, err := schtasks("/Delete", "/TN", taskAutostart, "/F"); err != nil {
+	if out, err := Schtasks("/Delete", "/TN", TaskAutostart, "/F"); err != nil {
 		return fmt.Errorf("планировщик: %s", bytes.TrimSpace(out))
 	}
 	return nil
-}
-
-// SetAutostart — переключатель «Запускать вместе с Windows».
-func (a *App) SetAutostart(on bool) string {
-	var err error
-	if on {
-		err = enableAutostart()
-	} else {
-		err = disableAutostart()
-	}
-	a.mu.Lock()
-	a.autostart = autostartEnabled()
-	a.mu.Unlock()
-	a.emitState()
-	if err != nil {
-		applog.Printf("автозапуск: %v", err)
-		return err.Error()
-	}
-	if on {
-		applog.Printf("автозапуск включён")
-	} else {
-		applog.Printf("автозапуск выключен")
-	}
-	return ""
 }
 
 // ---- запуск без прав ----
@@ -294,18 +272,18 @@ var (
 	allowSetForegroundWindowFn = user32.NewProc("AllowSetForegroundWindow")
 )
 
-// launchElevated — exe запущен без прав администратора. Если установленная
+// LaunchElevated — exe запущен без прав администратора. Если установленная
 // копия совпадает с этим exe — открываем её через задачу (без UAC). Иначе
 // (первый запуск, новая версия) — один раз спрашиваем UAC: запущенная с
 // правами копия сама обновит Program Files и задачу. Не возвращается.
-func launchElevated() {
+func LaunchElevated() {
 	self, _ := os.Executable()
 	// Через задачу — только обычный запуск: аргументы (--diag-tun) она не передаёт.
-	if inst, err := installedExe(); err == nil && len(os.Args) == 1 && sameFile(self, inst) {
+	if inst, err := InstalledExe(); err == nil && len(os.Args) == 1 && sameFile(self, inst) {
 		// Окно, открытое Планировщиком, иначе может остаться позади.
 		const asfwAny = ^uintptr(0)
 		allowSetForegroundWindowFn.Call(asfwAny)
-		if _, err := schtasks("/Run", "/TN", taskOpen); err == nil {
+		if _, err := Schtasks("/Run", "/TN", TaskOpen); err == nil {
 			os.Exit(0)
 		}
 	}
@@ -321,13 +299,13 @@ func launchElevated() {
 	os.Exit(0)
 }
 
-// hardenEnv — процесс с правами администратора, а переменные окружения
+// HardenEnv — процесс с правами администратора, а переменные окружения
 // пользователь задаёт сам (HKCU\Environment) — и они достаются нам и при
 // запуске через Планировщик, без UAC. Через них можно было бы подменить
 // папку данных (ProgramData), системные программы (PATH, windir), движок
 // WebView2 или добавить ему флаги (WEBVIEW2_*). Ставим системные значения.
-func hardenEnv() {
-	sys := systemDir()
+func HardenEnv() {
+	sys := SystemDir()
 	win, err := windows.GetWindowsDirectory()
 	if err != nil {
 		win = filepath.Dir(sys)
@@ -351,4 +329,73 @@ func hardenEnv() {
 			_ = os.Unsetenv(k)
 		}
 	}
+}
+
+// ---- удаление и обновление ----
+
+// RemoveAfterExit запускает скрытый cmd, который ждёт выхода программы и
+// удаляет папки. Пути берутся только из системных папок (не из окружения и
+// не от пользователя), поэтому подставлять их в команду безопасно.
+func RemoveAfterExit(dirs []string) error {
+	var b strings.Builder
+	// ~4 секунды на выход программы и WebView2.
+	b.WriteString("ping 127.0.0.1 -n 5 >nul")
+	for _, d := range dirs {
+		if !safeToRemove(d) {
+			return fmt.Errorf("странный путь %q", d)
+		}
+		fmt.Fprintf(&b, ` & rd /s /q "%s"`, d)
+	}
+	cmd := exec.Command(filepath.Join(SystemDir(), "cmd.exe"))
+	// Командную строку целиком: cmd по-своему разбирает кавычки.
+	cmd.SysProcAttr = &windows.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: windows.CREATE_NO_WINDOW | windows.DETACHED_PROCESS,
+		CmdLine:       `cmd.exe /d /c "` + b.String() + `"`,
+	}
+	return cmd.Start()
+}
+
+// safeToRemove — последний рубеж: удаляем только папки с «Pochinka» в имени
+// и не корень диска, что бы ни случилось с путями выше.
+func safeToRemove(d string) bool {
+	d = filepath.Clean(d)
+	base := strings.ToLower(filepath.Base(d))
+	return len(d) > 10 && strings.Contains(base, "pochinka") && !strings.ContainsAny(d, `"&|<>^%`)
+}
+
+// ReplaceExe ставит новый exe на место установленного. Запущенный файл
+// перезаписать нельзя, но переименовать можно — старый уходит в .old и
+// удаляется при следующем запуске (syncInstalledCopy).
+func ReplaceExe(src, dst string) error {
+	_ = os.Remove(dst + ".old")
+	if _, err := os.Stat(dst); err == nil {
+		if err := os.Rename(dst, dst+".old"); err != nil {
+			return err
+		}
+	}
+	if err := copyFile(src, dst); err != nil {
+		_ = os.Rename(dst+".old", dst)
+		return err
+	}
+	_ = os.Remove(src)
+	return nil
+}
+
+// StartAfterExit запускает exe через пару секунд, когда эта копия закроется.
+func StartAfterExit(exe string) error {
+	if !safeExePath(exe) {
+		return fmt.Errorf("странный путь %q", exe)
+	}
+	cmd := exec.Command(filepath.Join(SystemDir(), "cmd.exe"))
+	cmd.SysProcAttr = &windows.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: windows.CREATE_NO_WINDOW | windows.DETACHED_PROCESS,
+		CmdLine:       `cmd.exe /d /c "ping 127.0.0.1 -n 4 >nul & start "" "` + exe + `""`,
+	}
+	return cmd.Start()
+}
+
+func safeExePath(p string) bool {
+	return strings.EqualFold(filepath.Base(p), "Pochinka.exe") && !strings.ContainsAny(p, `"&|<>^%`)
 }

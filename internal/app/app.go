@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
 	"pochinka/internal/health"
+	"pochinka/internal/install"
 	"pochinka/internal/paths"
 	"pochinka/internal/tgproxy"
 	"pochinka/internal/userlists"
@@ -23,7 +24,7 @@ import (
 )
 
 // App — всё, что видит окно. Публичные методы вызываются из JS
-// (window.go.main.App.*), изменения прилетают в окно событием "state".
+// (window.go.app.App.*), изменения прилетают в окно событием "state".
 type App struct {
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -50,8 +51,8 @@ type App struct {
 	emitPending bool
 }
 
-// appVersion — версия программы (совпадает с productVersion в wails.json).
-const appVersion = "1.1.1"
+// Version — версия программы (совпадает с productVersion в wails.json).
+const Version = "1.1.1"
 
 type UIState struct {
 	Zapret    zapret.State             `json:"zapret"`
@@ -74,7 +75,7 @@ func NewApp() *App {
 	return &App{checks: map[string]health.Result{}}
 }
 
-func (a *App) startup(ctx context.Context) {
+func (a *App) Startup(ctx context.Context) {
 	a.ctx, a.cancel = context.WithCancel(ctx)
 	applog.OnLine(func(line string) {
 		if a.ctx != nil {
@@ -83,7 +84,7 @@ func (a *App) startup(ctx context.Context) {
 	})
 	// Есть ли задача автозапуска (schtasks — ~100 мс, не держим старт).
 	go func() {
-		on := autostartEnabled()
+		on := install.AutostartEnabled()
 		a.mu.Lock()
 		a.autostart = on
 		a.mu.Unlock()
@@ -183,7 +184,7 @@ func (a *App) zapretDomains() []string {
 }
 
 // beforeClose: крестик прячет окно в трей, а не закрывает приложение.
-func (a *App) beforeClose(ctx context.Context) bool {
+func (a *App) BeforeClose(ctx context.Context) bool {
 	a.mu.Lock()
 	q := a.quitting
 	a.mu.Unlock()
@@ -197,7 +198,7 @@ func (a *App) beforeClose(ctx context.Context) bool {
 // shutdown: что было включено, уже записано в конфиг в момент переключения
 // (SetVPN/SetZapret/SetTelegram) — при следующем запуске восстановится.
 // Здесь только аккуратно гасим всё в правильном порядке.
-func (a *App) shutdown(ctx context.Context) {
+func (a *App) Shutdown(ctx context.Context) {
 	// 1. Отменить всё, что идёт (подбор сервера, загрузки, проверки) —
 	//    иначе выход ждал бы их десятки секунд.
 	if a.cancel != nil {
@@ -256,7 +257,7 @@ func (a *App) GetState() UIState {
 	st := UIState{
 		Conflict:  conflict,
 		Autostart: autostart,
-		Version:   appVersion,
+		Version:   Version,
 		Update:    upd,
 		Pick:      pick,
 		SecureDNS: a.secureDNSState(),
@@ -700,7 +701,7 @@ func (a *App) Quit() {
 	runtime.Quit(a.ctx)
 }
 
-func (a *App) showWindow() {
+func (a *App) ShowWindow() {
 	// Второй запуск или клик в трее до окончания старта — окна ещё нет.
 	if a.ctx == nil {
 		return

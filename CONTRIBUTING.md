@@ -35,12 +35,17 @@
 
 | Папка | Что внутри |
 |---|---|
-| `*.go` (корень) | приложение: окно, трей, автозапуск, Telegram |
+| `main.go` | запуск программы |
+| `internal/app` | всё, что вызывает окно: переключатели, трей, темы, обновление |
+| `internal/install`, `internal/selfupdate` | установка, запуск без UAC, автозапуск; обновление с проверкой подписи |
 | `internal/zapret` | установка и запуск zapret, стратегии, игровые списки |
 | `internal/vpn` | подписки, xray-core, системный прокси, TUN |
 | `internal/tgproxy` | прокси для Telegram (порт tg-ws-proxy) |
+| `internal/health`, `internal/securedns`, `internal/userlists` | проверка доступности, защищённый DNS, свои списки |
 | `internal/paths`, `internal/config`, `internal/applog` | папки и права, настройки, журнал |
-| `frontend/dist` | интерфейс: HTML, CSS, JS без сборщиков; переводы в `i18n.js` |
+| `frontend/dist` | интерфейс: HTML, `css/`, `js/` по разделам без сборщиков; переводы в `js/i18n.js` |
+
+Подробнее — [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### Безопасность — обязательно
 
@@ -52,13 +57,6 @@
 
 Если меняете зависимости, пересоберите лицензии: `bash tools/genlicenses.sh`.
 
-## Выпуск релиза (для автора)
+## Выпуск релиза
 
-1. Поднять версию: `productVersion` в `wails.json` и `appVersion` в `app.go`.
-2. Если менялись зависимости: `bash tools/genlicenses.sh`.
-3. Собрать: `wails build -skipbindings -trimpath -ldflags "-s -w"`, скопировать в `release/Pochinka-X.Y.Z.exe`.
-4. **Подписать:** `go run ./tools/signer sign release/Pochinka-X.Y.Z.exe` → появится `.exe.sig`.
-5. Создать релиз `vX.Y.Z` и приложить **оба файла**: `Pochinka-X.Y.Z.exe` и `Pochinka-X.Y.Z.exe.sig`.
-   Без `.sig` (или с подписью другим ключом) встроенное обновление откажется ставить версию.
-
-Ключ подписи лежит в `%USERPROFILE%\.pochinka-release\signing.key`, в репозиторий не попадает. Держите резервную копию: без ключа новые версии не подписать.
+Порядок сборки и подписи — в [docs/RELEASING.md](docs/RELEASING.md).

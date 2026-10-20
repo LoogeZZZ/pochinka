@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"regexp"
@@ -85,8 +85,8 @@ func hexToRGBA(h string) *options.RGBA {
 	return &options.RGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 255}
 }
 
-// themeBackground — фон выбранной темы; nil — тема светлая/тёмная/системная.
-func themeBackground(c config.Config) *options.RGBA {
+// ThemeBackground — фон выбранной темы; nil — тема светлая/тёмная/системная.
+func ThemeBackground(c config.Config) *options.RGBA {
 	if bg, ok := themeBackgrounds[c.Theme]; ok {
 		return hexToRGBA(bg)
 	}

@@ -1,4 +1,4 @@
-package main
+package install
 
 import (
 	"encoding/xml"
@@ -45,14 +45,14 @@ func TestTaskRegisterLive(t *testing.T) {
 	f.Write(buf)
 	f.Close()
 	defer os.Remove(f.Name())
-	if out, err := schtasks("/Create", "/TN", "PochinkaT2", "/XML", f.Name(), "/F"); err != nil {
+	if out, err := Schtasks("/Create", "/TN", "PochinkaT2", "/XML", f.Name(), "/F"); err != nil {
 		t.Fatalf("%v %s", err, out)
 	}
-	defer schtasks("/Delete", "/TN", "PochinkaT2", "/F")
-	if out, err := schtasks("/Run", "/TN", "PochinkaT2"); err != nil {
+	defer Schtasks("/Delete", "/TN", "PochinkaT2", "/F")
+	if out, err := Schtasks("/Run", "/TN", "PochinkaT2"); err != nil {
 		t.Fatalf("run: %v %s", err, out)
 	}
-	out, err := schtasks("/Query", "/TN", "PochinkaT2", "/XML")
+	out, err := Schtasks("/Query", "/TN", "PochinkaT2", "/XML")
 	if err != nil || !strings.Contains(string(out), "PT0S") {
 		t.Fatalf("%v %s", err, out)
 	}

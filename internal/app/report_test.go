@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"strings"
@@ -18,7 +18,7 @@ func TestSupportReportNoSecrets(t *testing.T) {
 			t.Errorf("в отчёте утечка: %s", bad)
 		}
 	}
-	if !strings.Contains(r, "Починка "+appVersion) || !strings.Contains(r, "[Журнал") {
+	if !strings.Contains(r, "Починка "+Version) || !strings.Contains(r, "[Журнал") {
 		t.Fatalf("отчёт неполный:\n%s", r)
 	}
 }

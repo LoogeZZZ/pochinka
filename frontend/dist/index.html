@@ -13,7 +13,7 @@
       if (v && v.scheme && v.vars) { r.dataset.theme = v.scheme; for (const k in v.vars) if (/^--[a-z]+$/.test(k)) r.style.setProperty(k, String(v.vars[k])); }
     } catch (e) {}
   </script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="titlebar">
@@ -368,8 +368,15 @@
     </div>
   </div>
 
-  <script src="i18n.js"></script>
-  <script src="themes.js"></script>
-  <script src="app.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/themes.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/status.js"></script>
+  <script src="js/vpn.js"></script>
+  <script src="js/zapret.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/lists.js"></script>
+  <script src="js/dialogs.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

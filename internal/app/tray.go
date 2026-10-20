@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"runtime"
@@ -47,11 +47,11 @@ func startTray(app *App) *tray {
 		systray.Run(func() {
 			systray.SetIcon(assets.TrayOff)
 			systray.SetTooltip("Починка — " + trayT("off"))
-			systray.SetOnClick(func(systray.IMenu) { app.showWindow() })
+			systray.SetOnClick(func(systray.IMenu) { app.ShowWindow() })
 			systray.SetOnRClick(func(m systray.IMenu) { m.ShowMenu() })
 
 			t.open = systray.AddMenuItem(trayT("open"), "")
-			t.open.Click(app.showWindow)
+			t.open.Click(app.ShowWindow)
 			t.toggle = systray.AddMenuItem(trayT("connect"), "")
 			t.toggle.Click(func() { go app.Toggle() })
 			systray.AddSeparator()

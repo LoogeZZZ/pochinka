@@ -64,7 +64,7 @@ func keygen() error {
 	}
 	fmt.Println("закрытый ключ:", p)
 	fmt.Println("СДЕЛАЙТЕ РЕЗЕРВНУЮ КОПИЮ этого файла (без него новые версии не подписать).")
-	fmt.Println("публичный ключ (вшить в appupdate.go):", base64.StdEncoding.EncodeToString(pub))
+	fmt.Println("публичный ключ (вшить в internal/selfupdate/selfupdate.go):", base64.StdEncoding.EncodeToString(pub))
 	return nil
 }
 
