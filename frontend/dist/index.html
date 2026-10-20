@@ -195,6 +195,10 @@
         <li data-key="discord"><span>Discord</span><span class="val">—</span></li>
         <li data-key="youtube"><span>YouTube</span><span class="val">—</span></li>
       </ul>
+      <div class="note warn dns-note" id="dnsNote" hidden>
+        <span id="dnsNoteText"></span>
+        <button class="link" id="dnsFix">Включить защищённый DNS</button>
+      </div>
       <button class="ghost" id="recheck">Проверить снова</button>
 
       <div class="group-title">Стратегия</div>
@@ -260,6 +264,15 @@
           <span class="switch"><input type="checkbox" id="autostart"><i></i></span>
         </label>
       </div>
+
+      <div class="group-title">Защищённый DNS</div>
+      <div class="segmented four" id="sdns">
+        <button data-v="">Выкл</button>
+        <button data-v="google">Google</button>
+        <button data-v="cloudflare">Cloudflare</button>
+        <button data-v="quad9">Quad9</button>
+      </div>
+      <p class="hint" id="sdnsHint" style="margin-top:8px"></p>
 
       <div class="group-title">Тема</div>
       <div class="theme-grid" id="theme"></div>

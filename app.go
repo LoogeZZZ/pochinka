@@ -41,6 +41,7 @@ type App struct {
 	appUpdate  AppUpdate // новая версия Починки на GitHub
 	pick       PickState // автоподбор стратегии
 	pickCancel context.CancelFunc
+	sdnsErr    string             // ошибка защищённого DNS
 	onCancel   context.CancelFunc // отмена идущего включения обхода/VPN
 
 	modeMu sync.Mutex // переключение режимов обход ⇄ VPN
@@ -66,6 +67,7 @@ type UIState struct {
 	Version   string                   `json:"version"`
 	Update    AppUpdate                `json:"update"`
 	Pick      PickState                `json:"pick"`
+	SecureDNS SecureDNSState           `json:"secureDns"`
 }
 
 func NewApp() *App {
@@ -111,6 +113,7 @@ func (a *App) startup(ctx context.Context) {
 	go a.vpn.Loop(a.ctx)
 	go a.watchConflicts()
 	go a.watchAppUpdates()
+	go a.ensureSecureDNS()
 
 	if !winutil.IsAdmin() {
 		applog.Printf("ВНИМАНИЕ: приложение запущено без прав администратора — zapret не сможет работать")
@@ -256,6 +259,7 @@ func (a *App) GetState() UIState {
 		Version:   appVersion,
 		Update:    upd,
 		Pick:      pick,
+		SecureDNS: a.secureDNSState(),
 		Checks:    checks,
 		Checking:  checking,
 		Admin:     winutil.IsAdmin(),

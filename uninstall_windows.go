@@ -12,6 +12,7 @@ import (
 
 	"pochinka/internal/applog"
 	"pochinka/internal/paths"
+	"pochinka/internal/securedns"
 	"pochinka/internal/winutil"
 )
 
@@ -40,6 +41,13 @@ func (a *App) Uninstall() string {
 	}
 	if a.tg != nil {
 		a.tg.stop()
+	}
+	// Защищённый DNS — вернуть прежние DNS сетевых карт (до удаления папки
+	// данных: там записано, какие они были).
+	if securedns.Active() {
+		if err := securedns.Disable(); err != nil {
+			applog.Printf("удаление: DNS не вернулся: %v", err)
+		}
 	}
 
 	// 2. Задачи Планировщика: запуск без UAC и автозапуск.

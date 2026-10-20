@@ -321,6 +321,13 @@ function renderZapretView(s) {
     else { li.classList.add("bad"); val.textContent = r.detail || t("не открывается"); }
   }
   $("recheck").disabled = s.checking || z.status !== "running";
+  const dnsBad = Object.entries(s.checks || {}).filter(([, r]) => r && r.dnsBlocked).map(([k]) => (k === "youtube" ? "YouTube" : k === "discord" ? "Discord" : k));
+  const sdOn = !!(s.secureDns && s.secureDns.provider);
+  $("dnsNote").hidden = !dnsBad.length;
+  $("dnsNoteText").textContent = dnsBad.length
+    ? t("DNS провайдера не отдаёт адрес {x}: в браузере сайт может не открыться, даже если обход работает.", dnsBad.join(t(" и ")))
+    : "";
+  $("dnsFix").hidden = sdOn;
 
   const ul = $("strategies");
   const names = z.strategies && z.strategies.length ? z.strategies : [z.strategy];
@@ -354,6 +361,13 @@ function renderSettings(s) {
   $("navZapret").textContent = $("zapretSub").textContent;
   $("navVpn").textContent = $("vpnSub").textContent;
   $("navTg").textContent = $("tgSub").textContent;
+  const sd = s.secureDns || {};
+  for (const b of $("sdns").children) b.classList.toggle("sel", b.dataset.v === (sd.provider || ""));
+  $("sdnsHint").className = "hint" + (sd.error ? " err" : "");
+  $("sdnsHint").textContent = sd.error ? sd.error
+    : t(sd.doh
+      ? "DNS-запросы шифруются (DoH) — провайдер не сможет подменить адрес сайта. Прежние настройки сетевых карт вернутся при выключении."
+      : "В этой версии Windows шифрование DNS недоступно: будут только серверы выбранного сервиса. Прежние настройки вернутся при выключении.");
   CUSTOM = s.config.customTheme || null;
   applyTheme(s.config.theme || "system");
   const lang = s.config.lang === "en" ? "en" : "ru";
@@ -699,6 +713,14 @@ $("copyReport").addEventListener("click", async () => {
   $("copyReportLabel").textContent = t("Скопировано");
   setTimeout(() => { $("copyReportLabel").textContent = ""; }, 2500);
 });
+for (const b of $("sdns").children) b.addEventListener("click", () => guarded(async () => {
+  const r = await api().SetSecureDNS(b.dataset.v);
+  if (r) notify(r);
+}));
+$("dnsFix").addEventListener("click", () => guarded(async () => {
+  const r = await api().SetSecureDNS("google");
+  if (r) notify(r);
+}));
 $("quit").addEventListener("click", () => api().Quit());
 
 // журнал
