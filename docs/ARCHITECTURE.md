@@ -17,6 +17,7 @@ internal/
   tgproxy/              прокси для Telegram Desktop (порт tg-ws-proxy)
   health/               проверка «открывается ли»: YouTube, Discord и т.д., DoH
   securedns/            защищённый DNS Windows (включается только по кнопке)
+  hostsfile/            свой блок в hosts: записи Discord и Telegram из zapret
   userlists/            свои списки доменов, IP и программ
   config/ paths/ applog/ winutil/ assets/   настройки, папки и права, журнал,
                         WinAPI, вшитые файлы (иконки, geo-базы, wintun)

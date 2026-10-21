@@ -113,6 +113,29 @@ $("pickBtn").addEventListener("click", async () => {
 });
 $("recheck").addEventListener("click", () => api().RunChecks());
 for (const b of $("gameFilter").children) b.addEventListener("click", () => guarded(() => api().SetGameFilter(b.dataset.v)));
+for (const b of $("ipset").children) b.addEventListener("click", () => guarded(async () => {
+  const r = await api().SetIPSetMode(b.dataset.v);
+  if (r) notify(r);
+}));
+$("ipsetUpdate").addEventListener("click", () => guarded(async () => {
+  const label = $("ipsetUpdateLabel");
+  label.textContent = t("Скачиваю…");
+  const r = await api().UpdateIPSet();
+  label.textContent = "";
+  if (r.error) return notify(t("Список адресов не обновился: {x}", r.error));
+  const off = S && S.zapret.ipset;
+  notify(t("Список адресов обновлён, записей: {x}.", r.count) +
+    (off ? " " + t("Он работает в режиме «По списку».") : ""));
+}));
+$("hostsBlock").addEventListener("change", (e) => guarded(async () => {
+  const on = e.target.checked;
+  if (on && !(await ask(t("Починка добавит в файл hosts адреса Discord и Telegram из zapret-discord-youtube. Они закрепляют сайты за конкретными адресами: если адрес сменится, сайт не откроется до следующего обновления (при запуске Починки). Выключение убирает только эти записи."), { ok: t("Добавить") }))) {
+    e.target.checked = false;
+    return;
+  }
+  const r = await api().SetHostsBlock(on);
+  if (r) { e.target.checked = !on; notify(r); }
+}));
 $("autoUpdate").addEventListener("change", (e) => api().SetAutoUpdate(e.target.checked));
 $("checkUpd").addEventListener("click", async () => {
   const lbl = $("checkUpdLabel");

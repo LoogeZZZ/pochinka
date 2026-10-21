@@ -115,6 +115,7 @@ func (a *App) Startup(ctx context.Context) {
 	go a.watchConflicts()
 	go a.watchAppUpdates()
 	go a.ensureSecureDNS()
+	go a.refreshHosts()
 
 	if !winutil.IsAdmin() {
 		applog.Printf("ВНИМАНИЕ: приложение запущено без прав администратора — zapret не сможет работать")
@@ -460,6 +461,36 @@ func (a *App) SetGameFilter(mode string) string {
 		return err.Error()
 	}
 	return ""
+}
+
+// SetIPSetMode — фильтр по IP: "" (по списку) | none | any.
+func (a *App) SetIPSetMode(mode string) string {
+	if a.zapret == nil {
+		return "Обход недоступен — см. журнал"
+	}
+	if err := a.zapret.SetIPSetMode(a.ctx, mode); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+// IPSetResult — ответ кнопки «Обновить список адресов».
+type IPSetResult struct {
+	Count int    `json:"count"`
+	Error string `json:"error"`
+}
+
+// UpdateIPSet — кнопка «Обновить список адресов».
+func (a *App) UpdateIPSet() IPSetResult {
+	if a.zapret == nil {
+		return IPSetResult{Error: "Обход недоступен — см. журнал"}
+	}
+	n, err := a.zapret.UpdateIPSet(a.ctx)
+	if err != nil {
+		applog.Printf("zapret: список адресов: %v", err)
+		return IPSetResult{Error: err.Error()}
+	}
+	return IPSetResult{Count: n}
 }
 
 func (a *App) SetGameEnabled(id string, on bool) string {

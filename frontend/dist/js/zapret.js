@@ -50,6 +50,11 @@ function renderZapretView(s) {
 
   renderGames(s.games || [], s.config.disabledGames || [], s.config.enabledGames || []);
   for (const b of $("gameFilter").children) b.classList.toggle("sel", b.dataset.v === (z.gameFilter || "disabled"));
+  for (const b of $("ipset").children) b.classList.toggle("sel", b.dataset.v === (z.ipset || ""));
+  $("ipsetDate").textContent = z.ipsetUpdated
+    ? t("обновлён {x}", new Date(z.ipsetUpdated).toLocaleDateString(LANG === "en" ? "en-GB" : "ru-RU", { day: "numeric", month: "long" }))
+    : t("сейчас — список из zapret");
+  $("hostsBlock").checked = !!s.config.hostsBlock;
   $("autoUpdate").checked = !!s.config.autoUpdate;
   let ver = z.version || t("не установлен");
   if (z.latestVersion && z.version && z.latestVersion !== z.version) ver += " → " + z.latestVersion;

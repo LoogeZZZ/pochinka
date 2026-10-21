@@ -8,6 +8,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"pochinka/internal/applog"
+	"pochinka/internal/hostsfile"
 	"pochinka/internal/install"
 	"pochinka/internal/paths"
 	"pochinka/internal/securedns"
@@ -46,6 +47,11 @@ func (a *App) Uninstall() string {
 		if err := securedns.Disable(); err != nil {
 			applog.Printf("удаление: DNS не вернулся: %v", err)
 		}
+	}
+
+	// Свои записи hosts — убрать, чужие строки остаются.
+	if err := hostsfile.Disable(); err != nil {
+		applog.Printf("удаление: hosts: %v", err)
 	}
 
 	// 2. Задачи Планировщика: запуск без UAC и автозапуск.

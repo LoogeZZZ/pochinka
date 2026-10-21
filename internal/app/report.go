@@ -28,6 +28,7 @@ func (a *App) SupportReport() string {
 
 	z := st.Zapret
 	w("\n[Обход] %s · zapret %s · стратегия «%s» · порты игр: %s", z.Status, z.Version, prettyStrategy(z.Strategy), orDash(z.GameFilter))
+	w("  фильтр по IP: %s (список от %s) · записи hosts: %v", orDash(z.IPSet), orDash(z.IPSetUpdated), st.Config.HostsBlock)
 	if z.Error != "" {
 		w("  ошибка: %s", z.Error)
 	}

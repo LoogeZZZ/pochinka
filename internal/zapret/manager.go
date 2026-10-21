@@ -37,7 +37,9 @@ type State struct {
 	Strategy      string   `json:"strategy"`
 	Strategies    []string `json:"strategies"`
 	GameFilter    string   `json:"gameFilter"`
-	Busy          string   `json:"busy"` // что делаем прямо сейчас, для UI
+	IPSet         string   `json:"ipset"`        // режим фильтра по IP, см. ipset.go
+	IPSetUpdated  string   `json:"ipsetUpdated"` // когда обновляли список адресов (RFC 3339)
+	Busy          string   `json:"busy"`         // что делаем прямо сейчас, для UI
 }
 
 type Manager struct {
@@ -67,7 +69,10 @@ func NewManager(onChange func()) (*Manager, error) {
 	}
 	m.run = r
 	cfg := config.Load()
-	m.state = State{Status: StatusStopped, Strategy: cfg.Strategy, GameFilter: cfg.GameFilter}
+	m.state = State{Status: StatusStopped, Strategy: cfg.Strategy, GameFilter: cfg.GameFilter, IPSet: cfg.IPSetMode}
+	if t := IPSetUpdated(); !t.IsZero() {
+		m.state.IPSetUpdated = t.Format(time.RFC3339)
+	}
 	if v := m.pickInstalledVersion(cfg.ZapretVersion); v != "" {
 		m.state.Version = v
 		m.refreshStrategiesLocked()
@@ -472,6 +477,9 @@ func (m *Manager) prepareLists(dir string) error {
 	if err := patchReleaseExclude(filepath.Join(dir, "lists"), rules.Unexclude); err != nil {
 		return err
 	}
+	if err := prepareIPSet(filepath.Join(dir, "lists"), cfg.IPSetMode); err != nil {
+		return err
+	}
 
 	for name := range added {
 		l, _ := userlists.ByFile(name)
@@ -480,6 +488,9 @@ func (m *Manager) prepareLists(dir string) error {
 			return err
 		}
 		data := []byte(text)
+		if !hasEntries(string(data)) && len(added[name]) == 0 {
+			data = append(data, []byte("\n"+placeholders[name]+"\n")...)
+		}
 		if extra := added[name]; len(extra) > 0 {
 			data = append(data, []byte("\n# добавлено приложением\n"+strings.Join(extra, "\n")+"\n")...)
 		}
@@ -488,6 +499,13 @@ func (m *Manager) prepareLists(dir string) error {
 		}
 	}
 	return nil
+}
+
+// placeholders — заглушки для пустых списков, те же, что в service.bat.
+var placeholders = map[string]string{
+	"list-general-user.txt":  "domain.example.abc",
+	"list-exclude-user.txt":  "domain.example.abc",
+	"ipset-exclude-user.txt": ipsetPlaceholder,
 }
 
 // patchReleaseExclude убирает домены из исключений релиза (list-exclude.txt).

@@ -222,6 +222,21 @@
         <button data-v="udp">UDP</button>
       </div>
 
+      <div class="group-title">Фильтр по IP</div>
+      <p class="hint">Обход чинит сайты по списку доменов и по списку адресов. «Для всех» помогает играм и программам, которых нет в списках, но может мешать остальным сайтам.</p>
+      <div class="segmented three" id="ipset">
+        <button data-v="">По списку</button>
+        <button data-v="none">Выключен</button>
+        <button data-v="any">Для всех</button>
+      </div>
+      <div class="list" style="margin-top:8px">
+        <button class="item" id="ipsetUpdate"><span class="two">Обновить список адресов<small id="ipsetDate"></small></span><span class="muted" id="ipsetUpdateLabel"></span></button>
+        <label class="item">
+          <span class="two">Записи hosts для Discord и Telegram<small>если они не грузятся даже с обходом; адреса закрепляются и обновляются при каждом запуске</small></span>
+          <span class="switch"><input type="checkbox" id="hostsBlock"><i></i></span>
+        </label>
+      </div>
+
       <div class="group-title">Обновления</div>
       <div class="list">
         <label class="item">

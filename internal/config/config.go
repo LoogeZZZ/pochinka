@@ -15,6 +15,10 @@ type Config struct {
 	ZapretVersion string `json:"zapretVersion"`
 	// GameFilter: disabled | all | tcp | udp — как game_filter в service.bat.
 	GameFilter string `json:"gameFilter"`
+	// IPSetMode — фильтр по IP: "" (по списку) | none | any, см. zapret/ipset.go.
+	IPSetMode string `json:"ipsetMode,omitempty"`
+	// HostsBlock — записи hosts для Discord и Telegram из zapret-discord-youtube.
+	HostsBlock bool `json:"hostsBlock,omitempty"`
 	// AutoUpdate — проверять и ставить обновления zapret в фоне.
 	AutoUpdate bool `json:"autoUpdate"`
 	// DisabledGames — ID игровых групп, которые пользователь выключил.
