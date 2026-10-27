@@ -36,6 +36,11 @@ func dialClient(t *testing.T, addr string, secret []byte, dcIdx int, tag [4]byte
 	if err != nil {
 		t.Fatal(err)
 	}
+	return handshake(c, secret, dcIdx, tag)
+}
+
+// handshake — init-пакет obfuscated2 от имени Telegram-клиента.
+func handshake(c net.Conn, secret []byte, dcIdx int, tag [4]byte) *fakeClient {
 	rnd := make([]byte, 64)
 	for {
 		rand.Read(rnd)
@@ -56,9 +61,7 @@ func dialClient(t *testing.T, addr string, secret []byte, dcIdx int, tag [4]byte
 	}
 	rev := reverse(rnd[8:56])
 	dk := sha256.Sum256(append(append([]byte{}, rev[:32]...), secret...))
-	if _, err := c.Write(init); err != nil {
-		t.Fatal(err)
-	}
+	_, _ = c.Write(init) // ошибку увидит чтение ответа
 	return &fakeClient{c: c, enc: enc, dec: newCTR(dk[:], rev[32:])}
 }
 
@@ -318,5 +321,29 @@ func TestSplitterIntermediate(t *testing.T) {
 	parts = append(parts, sp.split(all[3:], all[3:])...)
 	if len(parts) != 2 || len(parts[0]) != 8 || len(parts[1]) != 12 {
 		t.Fatalf("нарезка: %v", parts)
+	}
+}
+
+// Фронт, который уже не ответил, не держит соединения Telegram: пул сразу
+// отдаёт nil, и прокси идёт запасным путём, а не ждёт таймаут на каждом.
+func TestPoolSkipsFailingFront(t *testing.T) {
+	p, err := Start(Options{Listen: "127.0.0.1:0", Secret: testSecret(), NoCF: true,
+		DCRedirects: map[int]string{2: "192.0.2.1"},
+		Dial: func(ctx context.Context, n, a string) (net.Conn, error) {
+			<-ctx.Done() // фронт режут: соединение висит до таймаута
+			return nil, ctx.Err()
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	key := poolKey{dc: 2}
+	p.pool.fail(key)
+	start := time.Now()
+	if ws := p.pool.get(key); ws != nil {
+		t.Fatal("мёртвый фронт отдал соединение")
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Fatalf("пул ждал мёртвый фронт %v", d)
 	}
 }

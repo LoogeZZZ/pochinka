@@ -90,11 +90,40 @@ func (wp *wsPool) get(key poolKey) *wsConn {
 	if got != nil {
 		return got
 	}
-	// Пул пуст — пробуем подключиться прямо сейчас (не ждать фоновой докачки).
+	// Пул пуст. Пока фронт не подводил, подключаемся сразу — чтобы первые
+	// соединения после запуска не уходили на запасной путь. Но если он уже
+	// не ответил, сразу запасные пути: иначе каждое соединение Telegram ждало
+	// бы таймаут (8 с) к фронту, который режут.
+	if wp.failing(key) {
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(wp.p.ctx, 8*time.Second)
 	defer cancel()
-	ws, _ := wp.connect(ctx, key)
+	ws, err := wp.connect(ctx, key)
+	if err != nil {
+		wp.fail(key)
+	}
 	return ws
+}
+
+// failing — фронт для key не ответил и с тех пор не оживал. Ожил ли он,
+// проверяет только фоновая докачка пула (с паузами), а не соединения Telegram.
+func (wp *wsPool) failing(key poolKey) bool {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+	return wp.failures[key] > 0
+}
+
+// fail запоминает неудачу: следующая попытка — с растущей паузой, до 15 минут.
+func (wp *wsPool) fail(key poolKey) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+	wp.failures[key]++
+	backoff := time.Second << min(wp.failures[key]-1, 10)
+	if backoff > 15*time.Minute {
+		backoff = 15 * time.Minute
+	}
+	wp.retryAt[key] = time.Now().Add(backoff)
 }
 
 func (wp *wsPool) refill(key poolKey) {
@@ -144,15 +173,11 @@ func (wp *wsPool) refill(key poolKey) {
 		if ok > 0 {
 			delete(wp.failures, key)
 			delete(wp.retryAt, key)
+			wp.mu.Unlock()
 		} else {
-			wp.failures[key]++
-			backoff := time.Second << min(wp.failures[key]-1, 10)
-			if backoff > 15*time.Minute {
-				backoff = 15 * time.Minute
-			}
-			wp.retryAt[key] = time.Now().Add(backoff)
+			wp.mu.Unlock()
+			wp.fail(key)
 		}
-		wp.mu.Unlock()
 	}()
 }
 
