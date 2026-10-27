@@ -52,7 +52,7 @@ type App struct {
 }
 
 // Version — версия программы (совпадает с productVersion в wails.json).
-const Version = "1.1.1"
+const Version = "1.1.2"
 
 type UIState struct {
 	Zapret    zapret.State             `json:"zapret"`
