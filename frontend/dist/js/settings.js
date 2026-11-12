@@ -190,7 +190,6 @@ function renderGames(games, disabled, enabled) {
       row.querySelector("small").textContent = g.games;
       const cb = row.querySelector("input");
       cb.dataset.id = g.id;
-      if (g.defaultOff) cb.dataset.defaultOff = "1";
       cb.addEventListener("change", () => guarded(() => api().SetGameEnabled(g.id, cb.checked)));
       box.appendChild(row);
     }
@@ -198,6 +197,8 @@ function renderGames(games, disabled, enabled) {
   }
   for (const cb of box.querySelectorAll("input")) {
     const id = cb.dataset.id;
-    cb.checked = !disabled.includes(id) && (enabled.includes(id) || !cb.dataset.defaultOff);
+    // Включена только группа, которую пользователь явно включил
+    // (и явно не выключил): по умолчанию все выключены.
+    cb.checked = !disabled.includes(id) && enabled.includes(id);
   }
 }

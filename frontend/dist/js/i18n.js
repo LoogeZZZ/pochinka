@@ -168,6 +168,7 @@ const EN = {
   "Для подбора нужен обход - VPN будет выключен. Продолжить?": "Picking needs unblocking - VPN will be turned off. Continue?",
   "Если сервис не открывается - выберите другую. Применяется сразу.": "If a service doesn’t open, pick another one. Applies immediately.",
   "Игры": "Games",
+  "Включайте только то, во что играете: обход может мешать остальным.": "Enable only the games you play: unblocking can interfere with the rest.",
   "Порты для игр - включайте, если игра всё равно не подключается.": "Game ports - turn on if a game still can’t connect.",
   "Выкл": "Off",
   "Обновления": "Updates",

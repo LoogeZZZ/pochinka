@@ -8,12 +8,15 @@ package zapret
 // которые обход ЛОМАЕТ (Steam, HoYoverse, Gryphline, EA), домены идут в
 // исключения, а не в обход.
 
-// GameGroup - набор правил для одной игры/издателя. Включается тумблером.
+// GameGroup - набор правил для одной игры/издателя. Включается тумблером:
+// по умолчанию выключены все группы, пользователь включает то, что ему нужно.
 type GameGroup struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Games string `json:"games"` // подпись для интерфейса
-	// DefaultOff - группа выключена, пока пользователь сам её не включит.
+	// DefaultOff - историческое: раньше такие группы были выключены по
+	// умолчанию, а остальные включены. Теперь все группы выключены по
+	// умолчанию, поле оставлено как пометка для описаний.
 	DefaultOff bool `json:"defaultOff"`
 
 	Include   []string `json:"-"` // домены через обход
@@ -106,6 +109,16 @@ var GameGroups = []GameGroup{
 		ID: "ea", Name: "EA", Games: "EA App, Battlefield - без обхода",
 		Exclude: []string{"ea.com", "cloudsync-prod.s3.us-east-1.amazonaws.com"},
 	},
+	{
+		// Scam With Your Friend: вход, ИИ-модели и Cloudflare Workers.
+		ID: "swyf", Name: "SWYF", Games: "Scam With Your Friend",
+		Include: []string{
+			"kolkata-auth.jataterworldwide.com",
+			"kolkata-ai.jataterworldwide.com",
+			"qwen-models.jataterworldwide.com",
+			"kolkata-ai.jatater-worldwide.workers.dev",
+		},
+	},
 }
 
 // GameRules - итог по всем включённым группам.
@@ -113,7 +126,9 @@ type GameRules struct {
 	Include, Exclude, IPExclude, Unexclude []string
 }
 
-// IsGameEnabled учитывает и явный выбор пользователя, и умолчание группы.
+// IsGameEnabled: группа включена, только если пользователь явно её включил
+// (и явно не выключил). Все группы по умолчанию выключены: пользователь
+// настраивает с нуля то, что ему нужно.
 func IsGameEnabled(g GameGroup, disabled, enabled []string) bool {
 	for _, id := range disabled {
 		if id == g.ID {
@@ -125,7 +140,7 @@ func IsGameEnabled(g GameGroup, disabled, enabled []string) bool {
 			return true
 		}
 	}
-	return !g.DefaultOff
+	return false
 }
 
 // CollectGameRules собирает правила всех включённых групп.

@@ -21,12 +21,12 @@ type Config struct {
 	HostsBlock bool `json:"hostsBlock,omitempty"`
 	// AutoUpdate - проверять и ставить обновления zapret в фоне.
 	AutoUpdate bool `json:"autoUpdate"`
-	// DisabledGames - ID игровых групп, которые пользователь выключил.
-	// Хранятся выключенные, а не включённые: новые группы из обновлений
-	// приложения включаются сами.
+	// DisabledGames - ID игровых групп, которые пользователь выключил явно.
+	// EnabledGames - ID групп, которые пользователь включил явно.
+	// Включена только группа из EnabledGames, которой нет в DisabledGames:
+	// по умолчанию выключены все, новые группы из обновлений тоже.
 	DisabledGames []string `json:"disabledGames"`
-	// EnabledGames - ID групп, выключенных по умолчанию, которые включил пользователь.
-	EnabledGames []string `json:"enabledGames"`
+	EnabledGames  []string `json:"enabledGames"`
 	// VPN
 	VPNActiveSub string `json:"vpnActiveSub"` // ID активной подписки (сами подписки - в vpn-subs\)
 	// Устарело: одиночная подписка до версии с мульти-подписками, переносится автоматически.
