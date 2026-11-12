@@ -28,7 +28,7 @@ type Release struct {
 
 // LatestRelease узнаёт последнюю версию. Сначала через API, а если он не
 // отвечает (лимит 60 запросов/час без токена), то по редиректу
-// /releases/latest — у него лимита нет, а имя архива предсказуемое.
+// /releases/latest - у него лимита нет, а имя архива предсказуемое.
 func LatestRelease(ctx context.Context) (Release, error) {
 	r, err := latestViaAPI(ctx)
 	if err == nil {
@@ -94,7 +94,7 @@ func latestViaRedirect(ctx context.Context) (Release, error) {
 
 var versionRe = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z._-]{0,40}$`)
 
-// ValidVersion — имя версии безопасно как имя папки (никаких "..", путей).
+// ValidVersion - имя версии безопасно как имя папки (никаких "..", путей).
 func ValidVersion(v string) bool { return versionRe.MatchString(v) && !strings.Contains(v, "..") }
 
 // Install скачивает и распаковывает релиз в versionsDir/<версия>.
@@ -143,7 +143,7 @@ func Install(ctx context.Context, versionsDir string, r Release) (string, error)
 	}
 	if !IsInstalled(staging) {
 		os.RemoveAll(staging)
-		return "", errors.New(`файлы zapret (winws.exe, WinDivert) удалил антивирус — добавьте папку C:\ProgramData\Pochinka\zapret в исключения Защитника и нажмите ещё раз`)
+		return "", errors.New(`файлы zapret (winws.exe, WinDivert) удалил антивирус - добавьте папку C:\ProgramData\Pochinka\zapret в исключения Защитника и нажмите ещё раз`)
 	}
 	_ = os.RemoveAll(final)
 	if err := os.Rename(staging, final); err != nil {
@@ -152,7 +152,7 @@ func Install(ctx context.Context, versionsDir string, r Release) (string, error)
 	return final, nil
 }
 
-// IsInstalled — есть ли в папке всё нужное для запуска.
+// IsInstalled - есть ли в папке всё нужное для запуска.
 func IsInstalled(dir string) bool {
 	for _, f := range []string{`bin\winws.exe`, `bin\WinDivert.dll`, `bin\WinDivert64.sys`, `bin\cygwin1.dll`} {
 		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
@@ -177,7 +177,7 @@ func unzipStrip(zipPath, dst string) error {
 		if name == "" {
 			continue
 		}
-		// В zip разделитель — "/", но Windows понимает и "\": приводим к
+		// В zip разделитель - "/", но Windows понимает и "\": приводим к
 		// одному виду до проверки, иначе "a\..\..\x.dll" прошёл бы мимо.
 		name = strings.ReplaceAll(name, `\`, "/")
 		clean := path.Clean("/" + name)[1:] // защита от ../ в архиве
@@ -238,7 +238,7 @@ func extractFile(f *zip.File, target string) error {
 	return err
 }
 
-// InstalledVersions — список распакованных версий (по имени папки).
+// InstalledVersions - список распакованных версий (по имени папки).
 func InstalledVersions(versionsDir string) []string {
 	entries, _ := os.ReadDir(versionsDir)
 	var out []string

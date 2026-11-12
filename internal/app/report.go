@@ -11,7 +11,7 @@ import (
 	"pochinka/internal/applog"
 )
 
-// SupportReport — текст для «Скопировать отчёт»: версия, состояние модулей
+// SupportReport - текст для «Скопировать отчёт»: версия, состояние модулей
 // и хвост журнала. Ссылки подписок, ключи и секреты сюда не попадают: в
 // состоянии их нет, а журнал чистится при записи (applog.redact).
 func (a *App) SupportReport() string {
@@ -42,7 +42,7 @@ func (a *App) SupportReport() string {
 		if r.OK {
 			w("  %s: открывается (%d мс)", k, r.Latency)
 		} else {
-			w("  %s: НЕ открывается — %s", k, r.Detail)
+			w("  %s: НЕ открывается - %s", k, r.Detail)
 		}
 	}
 
@@ -67,7 +67,7 @@ func (a *App) SupportReport() string {
 		w("  ошибка: %s", t.Error)
 	}
 
-	w("\n[Журнал — последние строки]")
+	w("\n[Журнал - последние строки]")
 	lines := applog.Tail()
 	if len(lines) > 150 {
 		lines = lines[len(lines)-150:]
@@ -81,7 +81,7 @@ func (a *App) SupportReport() string {
 
 func orDash(s string) string {
 	if s == "" {
-		return "—"
+		return "-"
 	}
 	return s
 }

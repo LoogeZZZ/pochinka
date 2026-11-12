@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Сверка с настоящим cmd.exe. ZAPRET_CMP_DIR — копия релиза, где
+// Сверка с настоящим cmd.exe. ZAPRET_CMP_DIR - копия релиза, где
 // bin\winws.exe подменён программой, пишущей свои аргументы в $ECHO_OUT.
 func TestParseMatchesCmd(t *testing.T) {
 	dir := os.Getenv("ZAPRET_CMP_DIR")

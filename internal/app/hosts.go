@@ -8,7 +8,7 @@ import (
 	"pochinka/internal/hostsfile"
 )
 
-// SetHostsBlock — переключатель «Записи hosts для Discord и Telegram».
+// SetHostsBlock - переключатель «Записи hosts для Discord и Telegram».
 func (a *App) SetHostsBlock(on bool) string {
 	var err error
 	n := 0
@@ -32,7 +32,7 @@ func (a *App) SetHostsBlock(on bool) string {
 	return ""
 }
 
-// refreshHosts — при запуске обновить записи: адреса в источнике меняются,
+// refreshHosts - при запуске обновить записи: адреса в источнике меняются,
 // а устаревшая запись в hosts хуже, чем никакой.
 func (a *App) refreshHosts() {
 	if !config.Load().HostsBlock {

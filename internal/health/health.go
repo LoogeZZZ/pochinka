@@ -1,6 +1,6 @@
 // Package health проверяет, открываются ли сервисы с этого компьютера.
 //
-// Проверка идёт обычным HTTPS-запросом — так же, как ходит браузер, поэтому
+// Проверка идёт обычным HTTPS-запросом - так же, как ходит браузер, поэтому
 // winws обрабатывает её точно так же, как настоящий трафик.
 package health
 
@@ -20,7 +20,7 @@ type Result struct {
 	OK      bool   `json:"ok"`
 	Detail  string `json:"detail"`
 	Latency int64  `json:"latencyMs"`
-	// DNSBlocked — DNS провайдера не отдаёт адрес, а защищённый DNS отдаёт:
+	// DNSBlocked - DNS провайдера не отдаёт адрес, а защищённый DNS отдаёт:
 	// браузер с обычным DNS сайт не откроет, даже если обход работает.
 	DNSBlocked bool `json:"dnsBlocked"`
 }
@@ -35,11 +35,12 @@ type target struct {
 var targets = []target{
 	{"discord", "https://discord.com/", 48 << 10},
 	{"youtube", "https://www.youtube.com/", 96 << 10},
+	{"twitch", "https://www.twitch.tv/", 48 << 10},
 }
 
 var client = newClient(nil)
 
-// newClient — клиент проверки. resolved != nil — соединяться по этому
+// newClient - клиент проверки. resolved != nil - соединяться по этому
 // адресу вместо системного DNS (SNI и заголовок Host остаются прежними,
 // поэтому для обхода и сайта запрос неотличим от обычного).
 func newClient(resolved net.IP) *http.Client {
@@ -60,12 +61,26 @@ func newClient(resolved net.IP) *http.Client {
 	return &http.Client{Timeout: 10 * time.Second, Transport: tr}
 }
 
-// CheckAll проверяет все сервисы параллельно.
-func CheckAll(ctx context.Context) map[string]Result {
-	out := make(map[string]Result, len(targets))
+// CheckAll проверяет все сервисы параллельно. extra - свои сайты (домены,
+// ключом результата будет сам домен).
+func CheckAll(ctx context.Context, extra []string) map[string]Result {
+	all := append([]target(nil), targets...)
+	seen := map[string]bool{}
+	for _, t := range targets {
+		seen[t.key] = true
+	}
+	for _, d := range extra {
+		d = strings.TrimSpace(strings.TrimSuffix(strings.ToLower(d), "."))
+		if d == "" || seen[d] || strings.ContainsAny(d, "/?#:@ ") {
+			continue
+		}
+		seen[d] = true
+		all = append(all, target{key: d, url: "https://" + d + "/", minBytes: 48 << 10})
+	}
+	out := make(map[string]Result, len(all))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	for _, t := range targets {
+	for _, t := range all {
 		wg.Add(1)
 		go func(t target) {
 			defer wg.Done()
@@ -85,17 +100,17 @@ func check(ctx context.Context, t target) Result {
 		return r
 	}
 	// Системный DNS не нашёл имя. Спрашиваем защищённый DNS: если он знает
-	// адрес — виноват DNS провайдера, а заодно проверяем сам обход по этому
+	// адрес - виноват DNS провайдера, а заодно проверяем сам обход по этому
 	// адресу, чтобы подбор стратегий не браковал рабочие из-за DNS.
 	u, _ := url.Parse(t.url)
 	ip, derr := ResolveDoH(ctx, u.Hostname())
 	if derr != nil {
-		return Result{Detail: "DNS не находит адрес — похоже, нет интернета или DNS не работает совсем"}
+		return Result{Detail: "DNS не находит адрес - похоже, нет интернета или DNS не работает совсем"}
 	}
 	r2, err2 := fetch(ctx, newClient(ip), t)
 	r2.DNSBlocked = true
 	if err2 != nil {
-		r2.Detail = "DNS провайдера не отдаёт адрес; по защищённому DNS — " + r2.Detail
+		r2.Detail = "DNS провайдера не отдаёт адрес; по защищённому DNS - " + r2.Detail
 	}
 	return r2
 }
@@ -118,7 +133,7 @@ func fetch(ctx context.Context, cl *http.Client, t target) (Result, error) {
 	return Result{OK: true, Latency: ms}, nil
 }
 
-// isNotFound — имя не нашлось (NXDOMAIN или DNS не ответил вовсе).
+// isNotFound - имя не нашлось (NXDOMAIN или DNS не ответил вовсе).
 func isNotFound(err error) bool {
 	var de *net.DNSError
 	if errors.As(err, &de) {

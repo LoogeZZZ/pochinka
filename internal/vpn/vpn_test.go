@@ -78,7 +78,7 @@ func TestSubscriptionFormats(t *testing.T) {
 	}
 }
 
-// GEO_TEST_DIR — папка с geosite.dat и geoip.dat (ru-only).
+// GEO_TEST_DIR - папка с geosite.dat и geoip.dat (ru-only).
 func TestConfigsLoadInXray(t *testing.T) {
 	geo := os.Getenv("GEO_TEST_DIR")
 	if geo == "" {
@@ -156,7 +156,7 @@ func TestRejectsBrokenServers(t *testing.T) {
 	}
 }
 
-// Провайдер на каждый запрос отдаёт другой хост того же сервера — выбор
+// Провайдер на каждый запрос отдаёт другой хост того же сервера - выбор
 // пользователя и соединение не должны от этого сбрасываться.
 func TestServerIDStableAcrossHostRotation(t *testing.T) {
 	a, _ := parseBody([]byte(strings.Replace(testLinks["vless-reality-vision"], "1.2.3.4", "5.6.7.8", 1)))
@@ -170,7 +170,7 @@ func TestServerIDStableAcrossHostRotation(t *testing.T) {
 }
 
 // Злая подписка: поля, которые заставили бы xray (с правами админа) писать
-// или читать файлы, должны быть вычищены, а не-прокси outbound — отброшен.
+// или читать файлы, должны быть вычищены, а не-прокси outbound - отброшен.
 func TestSanitizeHostileSubscription(t *testing.T) {
 	js := `[
 	 {"remarks":"evil-main","outbounds":[

@@ -120,7 +120,7 @@ func DiagTUN() string {
 		say("%-40s %d за %v%s", u, resp.StatusCode, time.Since(start).Round(time.Millisecond), extra)
 	}
 
-	// Перезапуск TUN внутри одного процесса — то, что раньше падало с
+	// Перезапуск TUN внутри одного процесса - то, что раньше падало с
 	// «initialization already completed».
 	say("\n--- перезапуск TUN ---")
 	e.stop()

@@ -22,7 +22,7 @@ func TestSafeToRemove(t *testing.T) {
 	}
 }
 
-// LIVE_UNINSTALL=1 — настоящий отложенный cmd на временных папках.
+// LIVE_UNINSTALL=1 - настоящий отложенный cmd на временных папках.
 func TestRemoveAfterExitLive(t *testing.T) {
 	if os.Getenv("LIVE_UNINSTALL") == "" {
 		t.Skip("LIVE_UNINSTALL=1")

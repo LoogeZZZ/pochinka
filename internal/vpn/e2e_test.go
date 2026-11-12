@@ -98,7 +98,7 @@ func connect(t *testing.T, proxy, target string) {
 	time.Sleep(200 * time.Millisecond)
 }
 
-// startVlessSniffer — «сервер», который только читает заголовок VLESS и
+// startVlessSniffer - «сервер», который только читает заголовок VLESS и
 // запоминает адрес назначения (домен:порт). Второй xray в том же процессе
 // не годится: логгер у xray глобальный и конфиг клиента перетрёт журнал.
 func startVlessSniffer(t *testing.T, addr string) func() string {
@@ -159,7 +159,7 @@ func startVlessSniffer(t *testing.T, addr string) func() string {
 }
 
 // Режим «всё, кроме российского»: зарубежное (в т.ч. панели на
-// DigitalOcean, которые ТСПУ замедляет) — через VPN, российское — напрямую.
+// DigitalOcean, которые ТСПУ замедляет) - через VPN, российское - напрямую.
 func TestRoutingAllExceptRU(t *testing.T) {
 	geo := os.Getenv("GEO_TEST_DIR")
 	if geo == "" {

@@ -21,6 +21,8 @@
 | [Twemoji Country Flags](https://github.com/talkjs/country-flag-emoji-polyfill) | шрифт флагов стран | MIT (код), CC-BY-4.0 (графика [Twemoji](https://github.com/jdecked/twemoji), © Twitter/X и участники) |
 | [Wails](https://github.com/wailsapp/wails) | окно и WebView2 | MIT |
 | [energye/systray](https://github.com/energye/systray) | иконка в трее | Apache-2.0 |
+| [jackmordaunt/go-toast](https://git.sr.ht/~jackmordaunt/go-toast) | уведомления Windows | MIT |
+| [WireGuard for Windows](https://github.com/WireGuard/wireguard-windows) | код фильтров WFP пакета `tunnel/firewall` перенесён в `internal/killswitch` (адаптирован: разрешение по exe вместо службы, только исходящие слои) | MIT, © 2019–2026 WireGuard LLC |
 
 ## Go-модули в сборке
 

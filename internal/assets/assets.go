@@ -1,4 +1,4 @@
-// Package assets — иконки, вшитые в exe. Перегенерировать: go run ./tools/genicon
+// Package assets - иконки, вшитые в exe. Перегенерировать: go run ./tools/genicon
 package assets
 
 import _ "embed"

@@ -9,7 +9,7 @@ func TestAdaptersReadOnly(t *testing.T) {
 		t.Skip(err)
 	}
 	for _, a := range list {
-		t.Logf("%s %s — v4 вручную: %q, v6 вручную: %q", a.Name, a.GUID, staticServers(a.GUID, false), staticServers(a.GUID, true))
+		t.Logf("%s %s - v4 вручную: %q, v6 вручную: %q", a.Name, a.GUID, staticServers(a.GUID, false), staticServers(a.GUID, true))
 	}
 	t.Logf("DoH в Windows: %v", DoHSupported())
 }

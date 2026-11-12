@@ -14,7 +14,7 @@ import (
 	"pochinka/internal/paths"
 )
 
-// subscription — одна подписка со всем её состоянием. Каждая лежит в своём
+// subscription - одна подписка со всем её состоянием. Каждая лежит в своём
 // файле, поэтому при переключении между подписками и после перезапуска
 // приложения всё возвращается как было: выбранный сервер, пинги, трафик.
 type subscription struct {
@@ -28,10 +28,10 @@ type subscription struct {
 	Servers  []cachedServer `json:"servers"`
 
 	servers []*Server // разобранные Servers
-	removed bool      // подписку удалили — фоновые операции не должны её воскресить
+	removed bool      // подписку удалили - фоновые операции не должны её воскресить
 }
 
-// SubView — подписка для окна (без ссылки: в ней токен доступа).
+// SubView - подписка для окна (без ссылки: в ней токен доступа).
 type SubView struct {
 	ID      string  `json:"id"`
 	Title   string  `json:"title"`

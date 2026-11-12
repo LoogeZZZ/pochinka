@@ -55,7 +55,7 @@ func TestMultiSubscriptionsRememberState(t *testing.T) {
 	ctx := context.Background()
 	m := NewManager(func() {}, func() []string { return nil }, nil)
 
-	// Подписки «ссылками на серверы» — без сети.
+	// Подписки «ссылками на серверы» - без сети.
 	subA := testLinks["vless-reality-vision"] + "\n" + testLinks["vless-ws"]
 	subB := testLinks["trojan"] + "\n" + testLinks["vless-grpc"]
 	if err := m.AddSubscription(ctx, subA); err != nil {
@@ -80,7 +80,7 @@ func TestMultiSubscriptionsRememberState(t *testing.T) {
 	pickA := m.State().Servers[0].ID
 	_ = m.Select(ctx, pickA)
 
-	// Переключаемся туда-обратно — выбор у каждой свой.
+	// Переключаемся туда-обратно - выбор у каждой свой.
 	_ = m.SetActiveSub(ctx, idB)
 	if got := m.State().Selected; got != pickB {
 		t.Fatalf("подписка B забыла сервер: %q вместо %q", got, pickB)
@@ -103,7 +103,7 @@ func TestMultiSubscriptionsRememberState(t *testing.T) {
 		t.Fatalf("дубликат подписки: %d", n)
 	}
 
-	// Удаление активной — активной становится оставшаяся.
+	// Удаление активной - активной становится оставшаяся.
 	m2.RemoveSubscription(ctx, idB)
 	st3 := m2.State()
 	if len(st3.Subs) != 1 || st3.ActiveSub != idA {

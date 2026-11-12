@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Починка</title>
   <script>
-    // Тема до первой отрисовки — без вспышки другого цвета.
+    // Тема до первой отрисовки - без вспышки другого цвета.
     try {
       const r = document.documentElement, t = localStorage.getItem("theme");
       const v = JSON.parse(localStorage.getItem("themeVars") || "null");
@@ -27,9 +27,34 @@
     </div>
   </div>
 
-  <div class="note" id="adminNote" hidden>Нужны права администратора — перезапустите программу от имени администратора.</div>
+  <div class="note" id="adminNote" hidden>Нужны права администратора - перезапустите программу от имени администратора.</div>
   <div class="note warn" id="conflictNote" hidden></div>
   <div class="note update" id="updateNote" hidden><span id="updateText"></span><span class="update-actions"><button class="link" id="updatePage">Что нового</button><button class="link" id="updateBtn">Обновить</button></span></div>
+
+  <!-- ================= Первый запуск ================= -->
+  <section class="view" id="viewWelcome" hidden>
+    <div class="scroll">
+      <div class="hero welcome-hero">
+        <div class="state">Добро пожаловать!</div>
+        <div class="sub">Что нужно починить?</div>
+      </div>
+      <div class="welcome-cards">
+        <button class="card welcome" id="wcZapret">
+          <span class="w-title">Discord, YouTube и игры</span>
+          <span class="w-sub">Обход блокировок - заработает сразу, без VPN</span>
+        </button>
+        <button class="card welcome" id="wcVpn">
+          <span class="w-title">VPN</span>
+          <span class="w-sub">Всё остальное: подписка или ссылки на серверы</span>
+        </button>
+        <button class="card welcome" id="wcTg">
+          <span class="w-title">Telegram</span>
+          <span class="w-sub">Быстрый прокси без VPN</span>
+        </button>
+      </div>
+      <button class="link center-link" id="wcSkip">Разобраться сам</button>
+    </div>
+  </section>
 
   <!-- ================= Главный экран ================= -->
   <section class="view" id="viewMain">
@@ -80,7 +105,7 @@
       <div id="subEmpty" hidden>
         <div class="card add">
           <div class="add-title">Добавьте подписку</div>
-          <p class="hint">Ссылка из бота или личного кабинета. Подходят Remnawave, Marzban, 3x-ui, а также ссылки vless://, vmess://, trojan://, ss://, hysteria2://</p>
+          <p class="hint">Ссылка из бота или личного кабинета. Подходят Remnawave, Marzban, 3x-ui, а также ссылки vless://, vmess://, trojan://, ss://, hysteria2://, wg://</p>
           <textarea id="subInput" rows="3" spellcheck="false" placeholder="https://…"></textarea>
           <div class="add-actions">
             <button class="btn ghost-btn" id="subCancel" hidden>Отмена</button>
@@ -89,7 +114,7 @@
           </div>
           <div class="err" id="subErr"></div>
         </div>
-        <p class="hint center">Через VPN пойдут только заблокированные сайты. Яндекс, банки и Госуслуги — как обычно, напрямую.</p>
+        <p class="hint center">Через VPN пойдут только заблокированные сайты. Яндекс, банки и Госуслуги - как обычно, напрямую.</p>
       </div>
 
       <!-- Есть подписка -->
@@ -107,6 +132,7 @@
             <div class="traffic-row"><span id="trafficText"></span><span id="expireText"></span></div>
           </div>
           <div class="vcheck" id="vpnCheck" hidden><span id="vpnCheckText"></span><button class="link" id="vpnCheckBtn">Проверить ещё раз</button></div>
+          <div class="announce warn" id="warnBox" hidden></div>
           <div class="announce" id="announce" hidden></div>
           <div class="sub-links">
             <button class="link" id="subSupport" hidden>Поддержка</button>
@@ -118,12 +144,18 @@
         <div class="group-title">Режим</div>
         <div class="segmented two" id="vpnMode">
           <button data-v="proxy">Системный прокси</button>
-          <button data-v="tun">TUN — все программы</button>
+          <button data-v="tun">TUN - все программы</button>
         </div>
         <p class="hint" id="modeHint"></p>
 
         <div class="group-title row-title"><span>Серверы</span><button class="link" id="pingBtn">Проверить пинг</button></div>
-        <ul class="list servers" id="servers"></ul>
+        <ul class="list servers" id="servers">
+          <li class="site-add" id="srvSearchRow">
+            <input type="search" id="srvSearch" placeholder="Поиск по серверам" spellcheck="false">
+            <button class="chip" id="srvSort">Как в подписке</button>
+          </li>
+        </ul>
+        <p class="hint center" id="srvEmpty" hidden>Ничего не найдено</p>
 
         <div class="group-title">Через VPN</div>
         <div class="segmented two" id="vpnRoute">
@@ -132,7 +164,7 @@
         </div>
         <p class="hint" id="routeHint" style="margin-top:8px"></p>
         <div class="list">
-          <button class="item" data-list="vpn-sites"><span class="two">Всегда через VPN<small>домены, IP и программы — поверх всех правил</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+          <button class="item" data-list="vpn-sites"><span class="two">Всегда через VPN<small>домены, IP и программы - поверх всех правил</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
         <button class="item" data-list="vpn-direct"><span class="two">Всегда напрямую<small>домены, IP и программы мимо VPN</small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
         </div>
       </div>
@@ -142,6 +174,10 @@
         <label class="item">
           <span class="two">Отправлять HWID устройства<small>нужно панелям с лимитом устройств (Remnawave)</small></span>
           <span class="switch"><input type="checkbox" id="sendHwid"><i></i></span>
+        </label>
+        <label class="item">
+          <span class="two">Kill Switch<small id="killSwitchState">пока VPN включён, другой трафик в интернет не выходит</small></span>
+          <span class="switch"><input type="checkbox" id="killSwitch"><i></i></span>
         </label>
       </div>
       <p class="hint" id="hwidHint" style="margin-top:8px"></p>
@@ -163,17 +199,17 @@
           </div>
           <span class="pill" id="tgPill"></span>
         </div>
-        <p class="hint" style="margin:0">Telegram Desktop пойдёт через WebSocket — тем же путём, что и web.telegram.org. Работает без VPN и не трогает остальной трафик.</p>
+        <p class="hint" style="margin:0">Telegram Desktop пойдёт через WebSocket - тем же путём, что и web.telegram.org. Работает без VPN и не трогает остальной трафик.</p>
         <button class="btn primary wide" id="tgConnect">Подключить Telegram</button>
         <div class="err" id="tgErr"></div>
-        <p class="hint" style="margin:0" id="tgHint">Telegram спросит «Подключить прокси?» — нажмите «Подключить».</p>
+        <p class="hint" style="margin:0" id="tgHint">Telegram спросит «Подключить прокси?» - нажмите «Подключить».</p>
       </div>
 
       <div class="group-title">Статистика</div>
       <ul class="list services">
-        <li><span>Соединений сейчас</span><span class="plain" id="tgActive">—</span></li>
-        <li><span>Через WebSocket / Cloudflare / TCP</span><span class="plain" id="tgPaths">—</span></li>
-        <li><span>Трафик ↑ / ↓</span><span class="plain" id="tgTraffic">—</span></li>
+        <li><span>Соединений сейчас</span><span class="plain" id="tgActive">-</span></li>
+        <li><span>Через WebSocket / Cloudflare / TCP</span><span class="plain" id="tgPaths">-</span></li>
+        <li><span>Трафик ↑ / ↓</span><span class="plain" id="tgTraffic">-</span></li>
       </ul>
 
       <div class="group-title">Прочее</div>
@@ -191,9 +227,11 @@
     </div>
     <div class="scroll">
       <div class="group-title">Проверка</div>
-      <ul class="list services">
-        <li data-key="discord"><span>Discord</span><span class="val">—</span></li>
-        <li data-key="youtube"><span>YouTube</span><span class="val">—</span></li>
+      <ul class="list services" id="services">
+        <li class="site-add" id="checkSiteRow">
+          <input type="search" id="checkSiteInput" placeholder="Свой сайт, например twitch.tv" spellcheck="false">
+          <button class="link" id="checkSiteAdd">Добавить</button>
+        </li>
       </ul>
       <div class="note warn dns-note" id="dnsNote" hidden>
         <span id="dnsNoteText"></span>
@@ -202,19 +240,19 @@
       <button class="ghost" id="recheck">Проверить снова</button>
 
       <div class="group-title">Стратегия</div>
-      <p class="hint">Если сервис не открывается — выберите другую. Применяется сразу.</p>
+      <p class="hint">Если сервис не открывается - выберите другую. Применяется сразу.</p>
       <div class="pick">
         <button class="btn primary wide" id="pickBtn">Подобрать автоматически</button>
         <p class="hint pick-status" id="pickStatus" hidden></p>
       </div>
-      <div class="group-sub" id="pickTitle" hidden>Подошли — выберите любую</div>
+      <div class="group-sub" id="pickTitle" hidden>Подошли - выберите любую</div>
       <ul class="list servers pick-list" id="pickList" hidden></ul>
       <div class="group-sub" id="allTitle" hidden>Все стратегии</div>
       <ul class="list" id="strategies"></ul>
 
       <div class="group-title">Игры</div>
       <div class="list" id="games"></div>
-      <p class="hint" style="margin-top:12px">Порты для игр — включайте, если игра всё равно не подключается.</p>
+      <p class="hint" style="margin-top:12px">Порты для игр - включайте, если игра всё равно не подключается.</p>
       <div class="segmented" id="gameFilter">
         <button data-v="disabled">Выкл</button>
         <button data-v="all">TCP+UDP</button>
@@ -244,7 +282,7 @@
           <span class="switch"><input type="checkbox" id="autoUpdate"><i></i></span>
         </label>
         <button class="item" id="checkUpd">
-          <span>zapret <span class="muted" id="zver">—</span></span>
+          <span>zapret <span class="muted" id="zver">-</span></span>
           <span class="muted" id="checkUpdLabel">Проверить</span>
         </button>
       </div>
@@ -278,6 +316,11 @@
           <span class="two">Запускать вместе с Windows<small>сразу в трей, без окна</small></span>
           <span class="switch"><input type="checkbox" id="autostart"><i></i></span>
         </label>
+        <label class="item">
+          <span class="two">Показывать уведомления<small>о подключении, отключении, ошибках и обновлениях</small></span>
+          <span class="switch"><input type="checkbox" id="notify"><i></i></span>
+        </label>
+        <button class="item" data-section="viewHotkeys"><span class="two">Горячие клавиши<small id="hotkeyNav"></small></span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
       </div>
 
       <div class="group-title">Защищённый DNS</div>
@@ -304,6 +347,8 @@
       <div class="group-title">Прочее</div>
       <div class="list">
         <button class="item" id="checkUpdate"><span>Проверить обновления</span><span class="muted" id="checkUpdateLabel"></span></button>
+        <button class="item" id="backupSave"><span class="two">Создать резервную копию<small>настройки, подписки и списки в один файл</small></span><span class="muted" id="backupSaveLabel"></span></button>
+        <button class="item" id="backupRestore"><span class="two">Восстановить из копии<small>заменит настройки и перезапустит программу</small></span></button>
         <button class="item" id="licenses"><span>Лицензии</span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
         <button class="item" id="copyReport"><span class="two">Скопировать отчёт<small>для вопроса в поддержку: состояние и журнал, без подписок и ключей</small></span><span class="muted" id="copyReportLabel"></span></button>
         <button class="item" data-open="viewLog"><span>Журнал</span><svg class="chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
@@ -311,6 +356,32 @@
         <button class="item" id="uninstall"><span class="two"><span class="danger">Удалить Починку</span><small>убрать программу, её настройки и всё, что она меняла</small></span></button>
       </div>
       <p class="hint center" id="appVer"></p>
+    </div>
+  </section>
+
+  <!-- ================= Горячие клавиши ================= -->
+  <section class="view" id="viewHotkeys" hidden>
+    <div class="vhead">
+      <button class="back" data-back="viewSettings"><svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <span>Горячие клавиши</span>
+    </div>
+    <div class="scroll">
+      <p class="hint">Работают из любого места, даже когда окно скрыто. Нажмите «Изменить» и наберите сочетание; Esc - отмена.</p>
+      <div class="group-title">Действия</div>
+      <div class="list" id="hotkeyList">
+        <div class="item" data-hk="toggle">
+          <span class="two">Включить/выключить всё<small>главная кнопка - последний использованный режим</small></span>
+          <span class="hk-right"><span class="hk-combo"></span><button class="link" data-set>Изменить</button><button class="link danger" data-clear hidden>Убрать</button></span>
+        </div>
+        <div class="item" data-hk="zapret">
+          <span class="two">Обход блокировок<small>Discord, YouTube и игры</small></span>
+          <span class="hk-right"><span class="hk-combo"></span><button class="link" data-set>Изменить</button><button class="link danger" data-clear hidden>Убрать</button></span>
+        </div>
+        <div class="item" data-hk="vpn">
+          <span class="two">VPN<small>подписка и выбранный сервер</small></span>
+          <span class="hk-right"><span class="hk-combo"></span><button class="link" data-set>Изменить</button><button class="link danger" data-clear hidden>Убрать</button></span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -391,6 +462,7 @@
   <script src="js/vpn.js"></script>
   <script src="js/zapret.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/hotkeys.js"></script>
   <script src="js/lists.js"></script>
   <script src="js/dialogs.js"></script>
   <script src="js/main.js"></script>

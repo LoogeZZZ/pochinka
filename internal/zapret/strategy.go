@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// Strategy — одна стратегия обхода, взятая из .bat-файла релиза.
+// Strategy - одна стратегия обхода, взятая из .bat-файла релиза.
 type Strategy struct {
 	Name string // "general (ALT2)"
 	File string // полный путь к .bat
@@ -78,15 +78,15 @@ func strategyKey(name string) (group int, num int) {
 	return 2, 0
 }
 
-// Vars — значения переменных, которые .bat получает от service.bat.
+// Vars - значения переменных, которые .bat получает от service.bat.
 type Vars struct {
-	BatDir        string // %~dp0 — папка релиза
+	BatDir        string // %~dp0 - папка релиза
 	GameFilterTCP string
 	GameFilterUDP string
 }
 
 // GameFilterPorts повторяет логику :game_switch_status из service.bat.
-// "12" — заглушка: порт, на котором заведомо ничего нет, чтобы фильтр был
+// "12" - заглушка: порт, на котором заведомо ничего нет, чтобы фильтр был
 // синтаксически валиден, но фактически выключен.
 func GameFilterPorts(mode string) (tcp, udp string) {
 	const off, full = "12", "1024-65535"
@@ -101,7 +101,7 @@ func GameFilterPorts(mode string) (tcp, udp string) {
 	return off, off
 }
 
-// asciiLower — нижний регистр только для ASCII: длина строки не меняется
+// asciiLower - нижний регистр только для ASCII: длина строки не меняется
 // (strings.ToLower заменяет битые байты UTF-8 на трёхбайтовый U+FFFD, и
 // найденный индекс не совпал бы с исходной строкой).
 func asciiLower(s string) string {
@@ -173,7 +173,7 @@ func ParseBat(path string, v Vars) ([]string, error) {
 	)
 	expanded := repl.Replace(cmdline.String())
 	if i := strings.Index(expanded, "%"); i >= 0 {
-		// Неизвестная переменная — лучше упасть явно, чем запустить winws
+		// Неизвестная переменная - лучше упасть явно, чем запустить winws
 		// с мусором в аргументах.
 		end := strings.Index(expanded[i+1:], "%")
 		if end >= 0 {
@@ -197,7 +197,7 @@ func splitArgs(s string) []string {
 	for _, r := range s {
 		switch {
 		case escaped:
-			// ^x вне кавычек в cmd.exe — это буквальный x (например, ^! → !).
+			// ^x вне кавычек в cmd.exe - это буквальный x (например, ^! → !).
 			cur.WriteRune(r)
 			has, escaped = true, false
 		case r == '^' && !inQuote:

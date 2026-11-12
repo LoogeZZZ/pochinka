@@ -15,7 +15,7 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
-// engine — xray-core, запущенный внутри нашего процесса.
+// engine - xray-core, запущенный внутри нашего процесса.
 type engine struct {
 	mu   sync.Mutex
 	inst *core.Instance
@@ -64,13 +64,13 @@ func (e *engine) running() bool {
 	return e.inst != nil
 }
 
-// mainEngine — движок основного подключения (для возврата ему журнала после
+// mainEngine - движок основного подключения (для возврата ему журнала после
 // временных экземпляров-замерщиков).
 var mainEngine *engine
 
 // reclaimMainLog делает журнал основного экземпляра снова глобальным: xray
 // регистрирует обработчик журнала один на процесс, и последний созданный
-// экземпляр (замерщик) перехватывает его, а закрывшись — глушит.
+// экземпляр (замерщик) перехватывает его, а закрывшись - глушит.
 func reclaimMainLog() {
 	e := mainEngine
 	if e == nil {

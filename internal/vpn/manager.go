@@ -17,6 +17,8 @@ import (
 
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
+	"pochinka/internal/killswitch"
+	"pochinka/internal/notify"
 	"pochinka/internal/paths"
 )
 
@@ -47,7 +49,7 @@ type State struct {
 
 	Subs      []SubView `json:"subs"`
 	ActiveSub string    `json:"activeSub"`
-	// Ниже — про активную подписку.
+	// Ниже - про активную подписку.
 	HasSub   bool         `json:"hasSub"`
 	SubHost  string       `json:"subHost"` // только домен, без токена
 	Info     SubInfo      `json:"info"`
@@ -58,17 +60,24 @@ type State struct {
 	Check   string `json:"check"`  // результат самопроверки
 	CheckOK bool   `json:"checkOk"`
 
+	// Warn - предупреждение об активной подписке: трафик на исходе или
+	// срок истекает. Пусто - всё в порядке. Уже на языке интерфейса.
+	Warn string `json:"warn"`
+
+	// KillSwitch - блокируется ли сейчас весь исходящий трафик мимо VPN.
+	KillSwitch bool `json:"killSwitch"`
+
 	HWID string `json:"hwid"` // что уходит панели в x-hwid
 }
 
-// cachedServer — сервер на диске (вместе с outbound).
+// cachedServer - сервер на диске (вместе с outbound).
 type cachedServer struct {
 	Server
 	Outbound map[string]any   `json:"outbound"`
 	Extra    []map[string]any `json:"extra"`
 }
 
-// cache — формат старой одиночной подписки (vpn-cache.json), для переноса.
+// cache - формат старой одиночной подписки (vpn-cache.json), для переноса.
 type cache struct {
 	Info    SubInfo        `json:"info"`
 	Servers []cachedServer `json:"servers"`
@@ -77,9 +86,9 @@ type cache struct {
 type Manager struct {
 	eng      engine
 	onChange func()
-	// zapretDomains — домены, которые сейчас чинит zapret (пусто, если он выключен).
+	// zapretDomains - домены, которые сейчас чинит zapret (пусто, если он выключен).
 	zapretDomains func() []string
-	// onTun сообщает zapret индекс физического интерфейса (0 — TUN выключен).
+	// onTun сообщает zapret индекс физического интерфейса (0 - TUN выключен).
 	onTun func(ifIndex int)
 
 	op sync.Mutex
@@ -90,11 +99,16 @@ type Manager struct {
 	active   string // ID активной подписки
 	want     bool
 	port     int  // порт HTTP-прокси, который мы выставили в системе
-	tunUp    bool // поднят TUN (а не прокси) — режим из конфига мог уже смениться
-	closed   bool // приложение закрывается — больше не стартуем
+	tunUp    bool // поднят TUN (а не прокси) - режим из конфига мог уже смениться
+	closed   bool // приложение закрывается - больше не стартуем
 	tunIfIdx int  // сетевая карта, к которой привязан TUN
 
 	startCancel context.CancelFunc // отмена идущего запуска
+
+	// warnShown/warnAt - про какое предупреждение подписки уже уведомили и
+	// когда: одно и то же предупреждение не повторяем чаще раза в сутки.
+	warnShown string
+	warnAt    time.Time
 }
 
 func NewManager(onChange func(), zapretDomains func() []string, onTun func(int)) *Manager {
@@ -102,7 +116,7 @@ func NewManager(onChange func(), zapretDomains func() []string, onTun func(int))
 	mainEngine = &m.eng
 	SetAssetDir(assetDir())
 	cfg := ensurePorts()
-	// Если в прошлый раз приложение упало с включённым прокси — убираем его.
+	// Если в прошлый раз приложение упало с включённым прокси - убираем его.
 	ClearSystemProxy(cfg.VPNHTTPPort)
 	m.state = State{Status: StatusStopped, Mode: modeOf(cfg)}
 	m.subs = loadSubs()
@@ -115,7 +129,7 @@ func NewManager(onChange func(), zapretDomains func() []string, onTun func(int))
 
 func assetDir() string { return filepath.Join(paths.DataDir(), "geo") }
 
-// xrayLog — журнал ядра; переменная, чтобы тесты без прав админа писали в temp.
+// xrayLog - журнал ядра; переменная, чтобы тесты без прав админа писали в temp.
 var xrayLog = func() string { return filepath.Join(paths.LogsDir(), "xray.log") }
 
 func modeOf(c config.Config) Mode {
@@ -168,6 +182,7 @@ func (m *Manager) State() State {
 	s := m.state
 	s.ActiveSub = m.active
 	s.HWID = Device().HWID
+	s.KillSwitch = killswitch.Active()
 	s.Subs = make([]SubView, len(m.subs))
 	for i, sub := range m.subs {
 		s.Subs[i] = SubView{ID: sub.ID, Title: sub.title(), Host: subHost(sub.URL), Info: sub.Info,
@@ -179,12 +194,61 @@ func (m *Manager) State() State {
 	s.Selected = AutoServer
 	if c != nil {
 		s.SubHost, s.Info, s.Selected = subHost(c.URL), c.Info, c.Selected
+		s.Warn = subWarn(c.Info)
 		s.Servers = make([]ServerView, len(c.servers))
 		for i, sv := range c.servers {
 			s.Servers[i] = ServerView{ID: sv.ID, Name: sv.Name, Protocol: sv.Protocol, Ping: c.Pings[sv.ID], UDP: sv.UDP}
 		}
 	}
 	return s
+}
+
+// subWarn - предупреждение о подписке на языке интерфейса: пусто, если всё
+// в порядке. Трафик считается использованным на 90%, срок - за 3 дня.
+func subWarn(info SubInfo) string {
+	if info.Expire > 0 {
+		left := time.Until(time.Unix(info.Expire, 0))
+		date := time.Unix(info.Expire, 0).Format("02.01.2006")
+		switch {
+		case left < 0:
+			return notify.Text("Подписка истекла - обновите или продлите её", "Subscription expired - renew or replace it")
+		case left < 72*time.Hour:
+			return notify.Text("Подписка истекает "+date, "Subscription expires "+date)
+		}
+	}
+	if info.Total > 0 {
+		used := info.Upload + info.Download
+		if used >= info.Total {
+			return notify.Text("Трафик подписки закончился", "Subscription traffic used up")
+		}
+		if pct := used * 100 / info.Total; pct >= 90 {
+			return notify.Text(fmt.Sprintf("Трафик на исходе: осталось %d%%", 100-pct), fmt.Sprintf("Traffic running low: %d%% left", 100-pct))
+		}
+	}
+	return ""
+}
+
+// warnSub уведомляет о предупреждении активной подписки - один раз при
+// появлении и не чаще раза в сутки, пока оно не снято.
+func (m *Manager) warnSub() {
+	m.mu.Lock()
+	c := m.cur()
+	m.mu.Unlock()
+	if c == nil {
+		return
+	}
+	warn := subWarn(c.Info)
+	m.mu.Lock()
+	shown, at := m.warnShown, m.warnAt
+	if warn == "" {
+		m.warnShown = ""
+	} else if warn != shown || time.Since(at) > 24*time.Hour {
+		m.warnShown, m.warnAt = warn, time.Now()
+		m.mu.Unlock()
+		notify.Show(notify.Text("Подписка VPN", "VPN subscription"), warn)
+		return
+	}
+	m.mu.Unlock()
 }
 
 func (m *Manager) set(fn func(s *State)) {
@@ -236,13 +300,14 @@ func (m *Manager) AddSubscription(ctx context.Context, url string) error {
 		return fmt.Errorf("не удалось сохранить подписку: %w", err)
 	}
 	_, _ = config.Update(func(c *config.Config) { c.VPNActiveSub = sub.ID })
-	applog.Printf("vpn: подписка «%s» добавлена — %d серверов", sub.title(), len(servers))
+	applog.Printf("vpn: подписка «%s» добавлена - %d серверов", sub.title(), len(servers))
 	m.onChange()
+	m.warnSub()
 	go m.Ping(context.Background())
 	return m.restartIfWanted(ctx)
 }
 
-// RefreshSubscription перезагружает подписку id (пусто — активную).
+// RefreshSubscription перезагружает подписку id (пусто - активную).
 func (m *Manager) RefreshSubscription(ctx context.Context, id string) error {
 	m.mu.Lock()
 	if id == "" {
@@ -272,10 +337,11 @@ func (m *Manager) RefreshSubscription(ctx context.Context, id string) error {
 	isActive := sub.ID == m.active
 	m.mu.Unlock()
 	m.onChange()
-	applog.Printf("vpn: подписка «%s» обновлена — %d серверов", sub.title(), len(servers))
+	m.warnSub()
+	applog.Printf("vpn: подписка «%s» обновлена - %d серверов", sub.title(), len(servers))
 	// Перезапуск только если у АКТИВНОЙ подписки поменялся сам набор
 	// серверов. Ротация хостов у провайдера (Dream VPN отдаёт на каждый
-	// запрос другой хост) соединение не рвёт — подхватится при следующем
+	// запрос другой хост) соединение не рвёт - подхватится при следующем
 	// подключении.
 	if isActive && old != serverIDs(servers) {
 		go m.Ping(context.Background())
@@ -296,6 +362,7 @@ func (m *Manager) SetActiveSub(ctx context.Context, id string) error {
 	m.mu.Unlock()
 	_, _ = config.Update(func(c *config.Config) { c.VPNActiveSub = id })
 	m.onChange()
+	m.warnSub()
 	if !changed {
 		return nil
 	}
@@ -303,7 +370,7 @@ func (m *Manager) SetActiveSub(ctx context.Context, id string) error {
 	return m.restartIfWanted(ctx)
 }
 
-// RemoveSubscription удаляет подписку. Если она была активной — VPN
+// RemoveSubscription удаляет подписку. Если она была активной - VPN
 // переключается на следующую (или выключается, если подписок не осталось).
 func (m *Manager) RemoveSubscription(ctx context.Context, id string) {
 	m.mu.Lock()
@@ -420,7 +487,39 @@ func (m *Manager) storePings(sub *subscription, pings map[string]int) {
 	m.onChange()
 }
 
-// verifySelected: вручную выбранный сервер не пропускает трафик —
+// fallbackSub - активная подписка не отвечает: ищем другую с живыми
+// серверами и делаем её активной на эту сессию (конфиг не трогаем - если
+// прежняя оживёт, при следующем запуске выбор будет честным). Возвращает
+// nil, если остальные подписки тоже мертвы.
+func (m *Manager) fallbackSub(ctx context.Context, dead *subscription) *subscription {
+	m.mu.Lock()
+	var candidates []*subscription
+	for _, s := range m.subs {
+		if s != dead && len(s.servers) > 0 {
+			candidates = append(candidates, s)
+		}
+	}
+	m.mu.Unlock()
+	for _, s := range candidates {
+		if ctx.Err() != nil {
+			return nil
+		}
+		if len(m.rankServers(ctx, s)) == 0 {
+			continue
+		}
+		m.mu.Lock()
+		m.active = s.ID
+		m.mu.Unlock()
+		m.onChange()
+		applog.Printf("vpn: подписка «%s» не отвечает - переключаюсь на «%s»", dead.title(), s.title())
+		notify.Show(notify.Text("Подписка не отвечает", "Subscription is not responding"),
+			notify.Text("Переключился на «"+s.title()+"»", "Switched to “"+s.title()+"”"))
+		return s
+	}
+	return nil
+}
+
+// verifySelected: вручную выбранный сервер не пропускает трафик -
 // переключаемся на «Авто», чтобы у пользователя не было «подключено, но
 // ничего не грузит».
 func (m *Manager) verifySelected(sub *subscription, s *Server) {
@@ -434,7 +533,7 @@ func (m *Manager) verifySelected(sub *subscription, s *Server) {
 	if res[s.ID] > 0 || !still {
 		return
 	}
-	applog.Printf("vpn: сервер «%s» не пропускает трафик — переключаюсь на «Авто»", s.Name)
+	applog.Printf("vpn: сервер «%s» не пропускает трафик - переключаюсь на «Авто»", s.Name)
 	_ = m.Select(context.Background(), AutoServer)
 }
 
@@ -461,13 +560,13 @@ func (m *Manager) wanted() bool {
 	return m.want
 }
 
-// restartIfWanted — применить новые настройки, если VPN включён. Проверка
-// «включён» — под той же блокировкой, что и запуск: иначе нажатие
+// restartIfWanted - применить новые настройки, если VPN включён. Проверка
+// «включён» - под той же блокировкой, что и запуск: иначе нажатие
 // «Выключить» могло проскочить между проверкой и стартом, и VPN поднимался
 // бы сам.
 func (m *Manager) restartIfWanted(ctx context.Context) error { return m.start(ctx, ifWanted) }
 
-// Start включает VPN (повторный вызов — перезапуск с новыми настройками).
+// Start включает VPN (повторный вызов - перезапуск с новыми настройками).
 func (m *Manager) Start(ctx context.Context) error { return m.start(ctx, always) }
 
 type startPolicy int
@@ -480,7 +579,7 @@ const (
 
 var errClosed = errors.New("приложение закрывается")
 
-// Close — при выходе из приложения: выключить и больше не включаться.
+// Close - при выходе из приложения: выключить и больше не включаться.
 func (m *Manager) Close() {
 	m.mu.Lock()
 	m.closed = true
@@ -488,7 +587,7 @@ func (m *Manager) Close() {
 	m.Stop()
 }
 
-// start: onlyIfRunning — перезапуск только уже работающего VPN; проверка
+// start: onlyIfRunning - перезапуск только уже работающего VPN; проверка
 // внутри блокировки, чтобы «Выключить» не проскочило между проверкой и стартом.
 func (m *Manager) start(parent context.Context, policy startPolicy) error {
 	m.op.Lock()
@@ -500,7 +599,7 @@ func (m *Manager) start(parent context.Context, policy startPolicy) error {
 		return errClosed
 	case parent.Err() != nil:
 		m.mu.Unlock()
-		return parent.Err() // включение уже отменили — даже не помечаем «хочу VPN»
+		return parent.Err() // включение уже отменили - даже не помечаем «хочу VPN»
 	case policy == ifWanted && !m.want,
 		policy == ifRunning && (!m.want || m.state.Status != StatusRunning):
 		m.mu.Unlock()
@@ -520,19 +619,19 @@ func (m *Manager) start(parent context.Context, policy startPolicy) error {
 	}()
 	err := m.startLocked(ctx)
 	if ctx.Err() != nil {
-		// Запуск отменили (Выключить/выход) — убираем недоподнятое молча:
+		// Запуск отменили (Выключить/выход) - убираем недоподнятое молча:
 		// состояние выставит Stop.
 		m.stopLocked(false)
 		return ctx.Err()
 	}
 	if err != nil {
-		// Не запустились — не держим «хочу VPN», иначе любое событие (смена
+		// Не запустились - не держим «хочу VPN», иначе любое событие (смена
 		// стратегии zapret, обновление базы) будет снова пытаться стартовать.
 		m.mu.Lock()
 		m.want = false
 		m.mu.Unlock()
 		m.stopLocked(false) // убрать недоподнятый прокси/TUN
-		// TUN не поднялся — zapret должен снова видеть все интерфейсы.
+		// TUN не поднялся - zapret должен снова видеть все интерфейсы.
 		if m.onTun != nil {
 			m.onTun(0)
 		}
@@ -557,7 +656,7 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	}
 	m.set(func(s *State) { s.Status, s.Error = StatusStarting, "" })
 
-	// Базы берём с диска или из вшитой копии — сеть для старта не нужна,
+	// Базы берём с диска или из вшитой копии - сеть для старта не нужна,
 	// свежие подтянет фоновое обновление.
 	if err := EnsureGeo(assetDir()); err != nil {
 		return fmt.Errorf("база блокировок: %w", err)
@@ -576,12 +675,19 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	} else if len(servers) == 1 {
 		active = servers[0].Name
 	} else {
-		// «Авто»: сначала замеряем, мёртвые выкидываем, самый быстрый —
+		// «Авто»: сначала замеряем, мёртвые выкидываем, самый быстрый -
 		// первым (он же запасной у балансировщика, пока тот не сделал свой
 		// первый замер).
 		alive := m.rankServers(ctx, sub)
 		if len(alive) == 0 {
-			return errors.New("ни один сервер подписки не отвечает — обновите подписку или проверьте интернет")
+			// Активная подписка мертва целиком - пробуем резервные.
+			if other := m.fallbackSub(ctx, sub); other != nil {
+				sub = other
+				alive = m.rankServers(ctx, other)
+			}
+		}
+		if len(alive) == 0 {
+			return errors.New("ни один сервер подписки не отвечает - обновите подписку или проверьте интернет")
 		}
 		use, active = alive, "Авто · "+alive[0].Name
 	}
@@ -589,14 +695,14 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	mode := modeOf(cfg)
 	m.stopLocked(mode == ModeTUN) // при перезапуске в TUN не дёргаем zapret дважды
 
-	// Порты прокси могли занять (другая программа, резерв Hyper-V/WSL) —
+	// Порты прокси могли занять (другая программа, резерв Hyper-V/WSL) -
 	// тогда берём свободные от системы и запоминаем.
 	if !portFree(cfg.VPNHTTPPort) || !portFree(cfg.VPNSocksPort) {
 		ps, err := freePorts(2)
 		if err != nil {
 			return fmt.Errorf("нет свободных портов: %w", err)
 		}
-		applog.Printf("vpn: порты %d/%d заняты — беру %d/%d", cfg.VPNHTTPPort, cfg.VPNSocksPort, ps[0], ps[1])
+		applog.Printf("vpn: порты %d/%d заняты - беру %d/%d", cfg.VPNHTTPPort, cfg.VPNSocksPort, ps[0], ps[1])
 		cfg.VPNHTTPPort, cfg.VPNSocksPort = ps[0], ps[1]
 		if _, err := config.Update(func(c *config.Config) { c.VPNHTTPPort, c.VPNSocksPort = ps[0], ps[1] }); err != nil {
 			applog.Printf("vpn: не удалось сохранить порты: %v", err)
@@ -624,7 +730,7 @@ func (m *Manager) startLocked(ctx context.Context) error {
 			return fmt.Errorf("wintun.dll: %w", err)
 		}
 	}
-	// В TUN — по очереди основное и запасное имя адаптера: прошлый адаптер
+	// В TUN - по очереди основное и запасное имя адаптера: прошлый адаптер
 	// Windows иногда удаляет минутами, и с его именем новый не создаётся.
 	names := []string{""}
 	if mode == ModeTUN {
@@ -647,9 +753,9 @@ func (m *Manager) startLocked(ctx context.Context) error {
 		if i == len(names)-1 || ctx.Err() != nil {
 			return err
 		}
-		applog.Printf("vpn: адаптер «%s» не создаётся (%v) — пробую «%s»", name, err, names[i+1])
+		applog.Printf("vpn: адаптер «%s» не создаётся (%v) - пробую «%s»", name, err, names[i+1])
 	}
-	// Пока поднимали ядро, могли нажать «Выключить» или закрыть приложение —
+	// Пока поднимали ядро, могли нажать «Выключить» или закрыть приложение -
 	// тогда системный прокси и маршруты не трогаем.
 	if ctx.Err() != nil {
 		m.eng.stop()
@@ -668,7 +774,7 @@ func (m *Manager) startLocked(ctx context.Context) error {
 			m.onTun(physIdx)
 		}
 	} else {
-		// port — до записи: если запись упадёт посередине, stopLocked всё
+		// port - до записи: если запись упадёт посередине, stopLocked всё
 		// равно уберёт то, что успело записаться.
 		m.mu.Lock()
 		m.port = cfg.VPNHTTPPort
@@ -677,6 +783,11 @@ func (m *Manager) startLocked(ctx context.Context) error {
 			m.eng.stop()
 			return fmt.Errorf("системный прокси: %w", err)
 		}
+	}
+	// Kill Switch - после того, как VPN уже поднялся (маршруты/прокси на
+	// месте): фильтры блокируют только чужой трафик, а самому VPN не мешают.
+	if cfg.KillSwitch {
+		m.enableKillSwitch(mode)
 	}
 	applog.Printf("vpn: подключено (%s, %s)", map[Mode]string{ModeProxy: "системный прокси", ModeTUN: "TUN"}[mode], active)
 	m.set(func(s *State) { s.Status, s.Active, s.Error, s.Check, s.CheckOK = StatusRunning, active, "", "", false })
@@ -692,7 +803,7 @@ func (m *Manager) startLocked(ctx context.Context) error {
 
 // Stop выключает VPN и возвращает системные настройки как были.
 func (m *Manager) Stop() {
-	// Сначала отменяем идущий запуск — он держит op, и без отмены «Выключить»
+	// Сначала отменяем идущий запуск - он держит op, и без отмены «Выключить»
 	// ждало бы окончания подбора сервера (десятки секунд).
 	m.mu.Lock()
 	m.want = false
@@ -732,12 +843,48 @@ func (m *Manager) stopLocked(stayTun bool) {
 	if wasTun && !stayTun && m.onTun != nil {
 		m.onTun(0)
 	}
+	// Kill Switch живёт только вместе с работающим VPN.
+	killswitch.Disable()
 }
 
-// Running — VPN поднят.
+// ApplyKillSwitch - пользователь переключил тумблер: применить к уже
+// работающему VPN без перезапуска (фильтры независимы от туннеля).
+func (m *Manager) ApplyKillSwitch() {
+	if m.State().Status != StatusRunning {
+		killswitch.Disable()
+		return
+	}
+	if !config.Load().KillSwitch {
+		killswitch.Disable()
+		return
+	}
+	m.enableKillSwitch(m.State().Mode)
+	m.onChange()
+}
+
+// enableKillSwitch поднимает фильтры Kill Switch под уже работающий VPN.
+// При ошибке VPN продолжает работать, а окно показывает «не включился».
+func (m *Manager) enableKillSwitch(mode Mode) {
+	var tunLUID uint64
+	if mode == ModeTUN {
+		luid, err := killswitch.LuidFromName(curTun())
+		if err != nil {
+			applog.Printf("kill switch: адаптер TUN не найден: %v", err)
+			notify.Show(notify.Text("Kill Switch не включился", "Kill Switch failed to enable"), err.Error())
+			return
+		}
+		tunLUID = luid
+	}
+	if err := killswitch.Enable(tunLUID); err != nil {
+		applog.Printf("kill switch: не включился: %v", err)
+		notify.Show(notify.Text("Kill Switch не включился", "Kill Switch failed to enable"), err.Error())
+	}
+}
+
+// Running - VPN поднят.
 func (m *Manager) Running() bool { return m.State().Status == StatusRunning }
 
-// Loop — фоновое обслуживание: обновление подписки и баз блокировок.
+// Loop - фоновое обслуживание: обновление подписки и баз блокировок.
 func (m *Manager) Loop(ctx context.Context) {
 	go m.watchNetwork(ctx)
 	t := time.NewTimer(20 * time.Second)
@@ -773,12 +920,13 @@ func (m *Manager) Loop(ctx context.Context) {
 				applog.Printf("vpn: базы блокировок обновлены")
 				m.RestartIfRunning(ctx)
 			}
+			m.warnSub() // трафик/срок могли подойти к краю и без обновления подписки
 		}
 		t.Reset(30 * time.Minute)
 	}
 }
 
-// RestartIfRunning — применить изменившиеся внешние условия (например,
+// RestartIfRunning - применить изменившиеся внешние условия (например,
 // включили/выключили zapret, поменялся список своих сайтов).
 // Трогает только реально работающий VPN: выключенный или упавший с ошибкой
 // не поднимается сам по себе.
@@ -786,7 +934,7 @@ func (m *Manager) RestartIfRunning(ctx context.Context) {
 	_ = m.start(ctx, ifRunning)
 }
 
-// DomainRules превращает список доменов (формат zapret: "^x" — без поддоменов)
+// DomainRules превращает список доменов (формат zapret: "^x" - без поддоменов)
 // в правила xray.
 func DomainRules(text string) []string {
 	seen := map[string]bool{}
@@ -825,7 +973,7 @@ func DomainRules(text string) []string {
 	return out
 }
 
-// redactConfig — копия конфига для диагностики без ключей и паролей.
+// redactConfig - копия конфига для диагностики без ключей и паролей.
 func redactConfig(js []byte) []byte {
 	var v any
 	if json.Unmarshal(js, &v) != nil {
@@ -856,13 +1004,13 @@ func redactConfig(js []byte) []byte {
 
 func logRejected() {
 	for _, r := range lastRejected() {
-		applog.Printf("vpn: сервер пропущен — ядро его не принимает: %s", r)
+		applog.Printf("vpn: сервер пропущен - ядро его не принимает: %s", r)
 	}
 }
 
 func cfgHTTPPort() int { return config.Load().VPNHTTPPort }
 
-// SetRouteAll: true — через VPN всё, кроме российского; false — только
+// SetRouteAll: true - через VPN всё, кроме российского; false - только
 // заблокированное.
 func (m *Manager) SetRouteAll(ctx context.Context, all bool) error {
 	_, _ = config.Update(func(c *config.Config) { c.VPNRouteAll = all })
@@ -882,7 +1030,7 @@ func looksLikeDomain(s string) bool {
 	return true
 }
 
-// probeIface — в режиме TUN замеры должны идти мимо нашего же туннеля
+// probeIface - в режиме TUN замеры должны идти мимо нашего же туннеля
 // (через сетевую карту), иначе мёртвый текущий сервер «убивал» бы все замеры.
 func (m *Manager) probeIface() string {
 	m.mu.Lock()
@@ -907,7 +1055,7 @@ func (m *Manager) CancelStart() {
 }
 
 // watchNetwork: в режиме TUN все соединения привязаны к конкретной сетевой
-// карте. Сменилась карта (Wi‑Fi ⇄ Ethernet, переподключение) — без
+// карте. Сменилась карта (Wi‑Fi ⇄ Ethernet, переподключение) - без
 // перезапуска весь интернет встал бы. Проверяем раз в 5 секунд.
 func (m *Manager) watchNetwork(ctx context.Context) {
 	t := time.NewTicker(5 * time.Second)
@@ -926,9 +1074,9 @@ func (m *Manager) watchNetwork(ctx context.Context) {
 		}
 		phys, err := PhysicalInterface()
 		if err != nil || phys.Index == idx {
-			continue // нет сети вовсе — ждём, перезапуск ничего не даст
+			continue // нет сети вовсе - ждём, перезапуск ничего не даст
 		}
-		applog.Printf("vpn: сменилась сетевая карта (%s) — переподключаю TUN", phys.Name)
+		applog.Printf("vpn: сменилась сетевая карта (%s) - переподключаю TUN", phys.Name)
 		m.RestartIfRunning(ctx)
 	}
 }

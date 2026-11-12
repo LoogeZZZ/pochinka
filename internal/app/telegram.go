@@ -16,7 +16,7 @@ import (
 	"pochinka/internal/tgproxy"
 )
 
-// TGState — состояние Telegram-прокси для окна.
+// TGState - состояние Telegram-прокси для окна.
 type TGState struct {
 	Running   bool          `json:"running"`
 	Error     string        `json:"error"`
@@ -31,9 +31,9 @@ type telegram struct {
 	err   string
 }
 
-// ensureTGConfig — секрет и порт создаются один раз: иначе Telegram
+// ensureTGConfig - секрет и порт создаются один раз: иначе Telegram
 // пришлось бы перенастраивать после каждого перезапуска.
-// tgMemo — секрет и порт в памяти: если конфиг не сохраняется (диск полон,
+// tgMemo - секрет и порт в памяти: если конфиг не сохраняется (диск полон,
 // нет прав), без этого каждый вызов придумывал бы новый секрет, и ссылка
 // не совпала бы с запущенным прокси.
 var tgMemo struct {
@@ -76,7 +76,7 @@ func memoTGPort(n int) {
 	tgMemo.Unlock()
 }
 
-// start поднимает прокси. Если порт занят чужой программой — выбираем
+// start поднимает прокси. Если порт занят чужой программой - выбираем
 // свободный и запоминаем (Telegram получит новую ссылку при «Подключить»).
 func (t *telegram) start() error {
 	t.mu.Lock()
@@ -136,13 +136,13 @@ func (t *telegram) state() TGState {
 	return st
 }
 
-// link — ссылка, по которой Telegram Desktop сам предложит включить прокси.
+// link - ссылка, по которой Telegram Desktop сам предложит включить прокси.
 func (t *telegram) link() string {
 	c := ensureTGConfig()
 	return fmt.Sprintf("tg://proxy?server=127.0.0.1&port=%d&secret=dd%s", c.TGPort, c.TGSecret)
 }
 
-// tgHandlerInstalled — установлен ли Telegram Desktop (зарегистрирована
+// tgHandlerInstalled - установлен ли Telegram Desktop (зарегистрирована
 // схема tg://). Без него ссылку открыть нечем.
 func tgHandlerInstalled() bool {
 	for _, root := range []registry.Key{registry.CURRENT_USER, registry.CLASSES_ROOT} {
@@ -180,10 +180,10 @@ func (a *App) SetTelegram(on bool) string {
 }
 
 // ConnectTelegram открывает в Telegram Desktop ссылку прокси (Telegram
-// спросит «Подключить прокси?» — один тап). Прокси включается, если был выключен.
+// спросит «Подключить прокси?» - один тап). Прокси включается, если был выключен.
 func (a *App) ConnectTelegram() string {
 	if !tgHandlerInstalled() {
-		return "Не найден Telegram Desktop — установите его с desktop.telegram.org"
+		return "Не найден Telegram Desktop - установите его с desktop.telegram.org"
 	}
 	if msg := a.SetTelegram(true); msg != "" {
 		return msg
@@ -193,6 +193,6 @@ func (a *App) ConnectTelegram() string {
 	return ""
 }
 
-// TelegramLink — для «Скопировать ссылку» (Telegram на другом устройстве не
+// TelegramLink - для «Скопировать ссылку» (Telegram на другом устройстве не
 // подойдёт: прокси слушает только этот компьютер).
 func (a *App) TelegramLink() string { return a.tg.link() }

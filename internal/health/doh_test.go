@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// LIVE_DOH=1 — настоящие запросы к защищённому DNS.
+// LIVE_DOH=1 - настоящие запросы к защищённому DNS.
 func TestResolveDoHLive(t *testing.T) {
 	if os.Getenv("LIVE_DOH") == "" {
 		t.Skip("LIVE_DOH=1")
@@ -33,7 +33,7 @@ func TestCheckFallsBackToDoHLive(t *testing.T) {
 	r := check(context.Background(), target{key: "x", url: "https://www.youtube.com.", minBytes: 1 << 10})
 	t.Logf("обычный: %+v", r)
 	// Имитируем «DNS провайдера не отдаёт адрес»: заведомо несуществующее
-	// для системы имя не подставить, поэтому проверяем вторую половину —
+	// для системы имя не подставить, поэтому проверяем вторую половину -
 	// запрос по адресу из защищённого DNS.
 	ip, err := ResolveDoH(context.Background(), "www.youtube.com")
 	if err != nil {

@@ -39,7 +39,7 @@ func dialClient(t *testing.T, addr string, secret []byte, dcIdx int, tag [4]byte
 	return handshake(c, secret, dcIdx, tag)
 }
 
-// handshake — init-пакет obfuscated2 от имени Telegram-клиента.
+// handshake - init-пакет obfuscated2 от имени Telegram-клиента.
 func handshake(c net.Conn, secret []byte, dcIdx int, tag [4]byte) *fakeClient {
 	rnd := make([]byte, 64)
 	for {
@@ -92,7 +92,7 @@ type tgSession struct {
 	dec, enc interface{ XORKeyStream(dst, src []byte) }
 }
 
-// parseRelay — сторона Telegram: obfuscated2 без секрета.
+// parseRelay - сторона Telegram: obfuscated2 без секрета.
 func parseRelay(init []byte) *tgSession {
 	key, iv := init[8:40], init[40:56]
 	dec := newCTR(key, iv)
@@ -256,7 +256,7 @@ func TestProxyRejectsWrongSecret(t *testing.T) {
 	}
 }
 
-// Без WS (DC без фронта) и без Cloudflare — прямой TCP до DC.
+// Без WS (DC без фронта) и без Cloudflare - прямой TCP до DC.
 func TestProxyTCPFallback(t *testing.T) {
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	defer ln.Close()

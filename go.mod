@@ -3,6 +3,7 @@ module pochinka
 go 1.27
 
 require (
+	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3
 	github.com/energye/systray v1.0.3
 	github.com/wailsapp/wails/v2 v2.16.0
 	github.com/xtls/xray-core v1.260327.1-0.20261010092107-701af60772cd
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/apernet/quic-go v0.61.1-0.20260806010916-184d081eef3e // indirect
 	github.com/bep/debounce v1.2.1 // indirect

@@ -9,7 +9,7 @@ import (
 
 // Браузеры на Chromium: расширение с правом "proxy" (Touch VPN, Browsec,
 // Hola…) подменяет прокси браузера своим, и тот перестаёт смотреть на
-// системный прокси Windows — VPN «работает», а браузер идёт мимо него.
+// системный прокси Windows - VPN «работает», а браузер идёт мимо него.
 var chromiumBrowsers = []struct{ name, dir string }{
 	{"Chrome", `Google\Chrome\User Data`},
 	{"Edge", `Microsoft\Edge\User Data`},
@@ -18,7 +18,7 @@ var chromiumBrowsers = []struct{ name, dir string }{
 	{"Opera", `Opera Software\Opera Stable`},
 }
 
-// BrowserProxyHijackers — включённые расширения, которые прямо сейчас
+// BrowserProxyHijackers - включённые расширения, которые прямо сейчас
 // управляют прокси браузера. Формат: «Touch VPN (Chrome)».
 func BrowserProxyHijackers() []string {
 	local := os.Getenv("LOCALAPPDATA")

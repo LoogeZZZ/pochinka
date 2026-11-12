@@ -12,12 +12,12 @@ import (
 )
 
 // Папка данных доступна только SYSTEM и администраторам. По умолчанию в
-// %ProgramData% любой пользователь может создавать файлы — а приложение
+// %ProgramData% любой пользователь может создавать файлы - а приложение
 // работает с правами администратора и запускает оттуда winws.exe и xray,
 // то есть подложенный файл дал бы повышение прав.
 //
-// logs\ — исключение: читать журналы может любой пользователь (секретов
-// в них нет — ссылки подписок и ключи вырезаются).
+// logs\ - исключение: читать журналы может любой пользователь (секретов
+// в них нет - ссылки подписок и ключи вырезаются).
 const (
 	sddlData = "O:BAD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)"
 	sddlLogs = "O:BAD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FR;;;BU)"
@@ -41,7 +41,7 @@ func applySDDL(path, sddl string) error {
 		owner, nil, dacl, nil)
 }
 
-// emptyDACL — пустой (но не NULL!) список прав. ACLFromEntries(nil, nil)
+// emptyDACL - пустой (но не NULL!) список прав. ACLFromEntries(nil, nil)
 // для этого не годится: Windows отдаёт NULL, и функция падает.
 func emptyDACL() (*windows.ACL, error) {
 	sd, err := windows.SecurityDescriptorFromString("D:")
@@ -55,7 +55,7 @@ func emptyDACL() (*windows.ACL, error) {
 	return dacl, err
 }
 
-// resetToInherited — владелец «Администраторы», явные права убраны: файл
+// resetToInherited - владелец «Администраторы», явные права убраны: файл
 // получает только права, унаследованные от папки. Так сбрасываются и
 // файлы, которые кто-то успел подложить до блокировки.
 func resetToInherited(path string, owner *windows.SID, empty *windows.ACL) error {
@@ -65,7 +65,7 @@ func resetToInherited(path string, owner *windows.SID, empty *windows.ACL) error
 }
 
 // Secure закрывает папку данных. Вызывается при каждом запуске. Любой
-// сбой здесь — только запись в журнал: приложение обязано запуститься.
+// сбой здесь - только запись в журнал: приложение обязано запуститься.
 func Secure() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -104,7 +104,7 @@ func Secure() (err error) {
 	return applySDDL(logs, sddlLogs)
 }
 
-// InstalledExe — установленная копия программы. Program Files берём у
+// InstalledExe - установленная копия программы. Program Files берём у
 // системы, а не из переменной окружения: её можно подменить.
 func InstalledExe() (string, error) {
 	pf, err := windows.KnownFolderPath(windows.FOLDERID_ProgramFiles, 0)
@@ -114,7 +114,7 @@ func InstalledExe() (string, error) {
 	return filepath.Join(pf, AppName, AppName+".exe"), nil
 }
 
-// RunningInstalled — запущена ли установленная копия (папка, куда без
+// RunningInstalled - запущена ли установленная копия (папка, куда без
 // прав администратора не записать).
 func RunningInstalled() bool {
 	inst, err1 := InstalledExe()

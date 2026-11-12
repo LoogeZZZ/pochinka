@@ -1,5 +1,5 @@
-// Перевод интерфейса. Ключ — русская строка как она есть в разметке и в
-// js/*.js, значение — английская. Чего нет в словаре, остаётся по-русски
+// Перевод интерфейса. Ключ - русская строка как она есть в разметке и в
+// js/*.js, значение - английская. Чего нет в словаре, остаётся по-русски
 // (например, сообщения бэкенда и журнал).
 let LANG = "ru";
 try { if (localStorage.getItem("lang") === "en") LANG = "en"; } catch (e) {}
@@ -11,11 +11,18 @@ const EN = {
   "Скрыть в трей": "Hide to tray",
   "Подключить": "Connect",
   "Отключить": "Disconnect",
-  "Нужны права администратора — перезапустите программу от имени администратора.": "Administrator rights required — restart the app as administrator.",
-  "Работает другой VPN — «{x}». Выключите его: два VPN мешают друг другу, и сайты не грузятся.": "Another VPN is running — “{x}”. Turn it off: two VPNs interfere and sites won’t load.",
+  "Нужны права администратора - перезапустите программу от имени администратора.": "Administrator rights required - restart the app as administrator.",
+  "Работает другой VPN - «{x}». Выключите его: два VPN мешают друг другу, и сайты не грузятся.": "Another VPN is running - “{x}”. Turn it off: two VPNs interfere and sites won’t load.",
 
   // главная
   "Отключено": "Disconnected",
+  "Добро пожаловать!": "Welcome!",
+  "Что нужно починить?": "What needs fixing?",
+  "Discord, YouTube и игры": "Discord, YouTube and games",
+  "Обход блокировок - заработает сразу, без VPN": "Unblocking - works right away, no VPN needed",
+  "Всё остальное: подписка или ссылки на серверы": "Everything else: a subscription or server links",
+  "Быстрый прокси без VPN": "A fast proxy without VPN",
+  "Разобраться сам": "I'll figure it out myself",
   "Подключение": "Connecting",
   "Подключено": "Connected",
   "Доступна версия {x}": "Version {x} is available",
@@ -38,11 +45,11 @@ const EN = {
   "Запускаю…": "Starting…",
   "Проверяю Discord и YouTube…": "Checking Discord and YouTube…",
   "Discord и YouTube открываются": "Discord and YouTube work",
-  "{x} не открывается — смените стратегию": "{x} doesn’t open — try another strategy",
+  "{x} не открывается - смените стратегию": "{x} doesn’t open - try another strategy",
   " и ": " and ",
   "Стратегия: {x}": "Strategy: {x}",
-  "Выключен — сейчас работает VPN": "Off — VPN is active",
-  "Выключен — сейчас работает обход": "Off — unblocking is active",
+  "Выключен - сейчас работает VPN": "Off - VPN is active",
+  "Выключен - сейчас работает обход": "Off - unblocking is active",
   "{x} · выключен": "{x} · off",
   "Подключаюсь…": "Connecting…",
   "Авто": "Auto",
@@ -53,14 +60,14 @@ const EN = {
   "Telegram Desktop не найден": "Telegram Desktop not found",
   "Подключён · соединений: {x}": "Connected · connections: {x}",
   "Прокси работает · Telegram не подключён": "Proxy is on · Telegram not connected",
-  "Прокси готов — нажмите «Подключить Telegram»": "Proxy ready — press “Connect Telegram”",
+  "Прокси готов - нажмите «Подключить Telegram»": "Proxy ready - press “Connect Telegram”",
   "выключен": "off",
   "подключён": "connected",
   "ожидает Telegram": "waiting for Telegram",
-  "Telegram Desktop пойдёт через WebSocket — тем же путём, что и web.telegram.org. Работает без VPN и не трогает остальной трафик.":
-    "Telegram Desktop will go through WebSocket — the same way as web.telegram.org. Works without VPN and doesn’t touch other traffic.",
+  "Telegram Desktop пойдёт через WebSocket - тем же путём, что и web.telegram.org. Работает без VPN и не трогает остальной трафик.":
+    "Telegram Desktop will go through WebSocket - the same way as web.telegram.org. Works without VPN and doesn’t touch other traffic.",
   "Подключить Telegram": "Connect Telegram",
-  "Telegram спросит «Подключить прокси?» — нажмите «Подключить».": "Telegram will ask “Enable proxy?” — press “Enable”.",
+  "Telegram спросит «Подключить прокси?» - нажмите «Подключить».": "Telegram will ask “Enable proxy?” - press “Enable”.",
   "Установите Telegram Desktop с desktop.telegram.org, затем нажмите кнопку.": "Install Telegram Desktop from desktop.telegram.org, then press the button.",
   "Статистика": "Statistics",
   "Соединений сейчас": "Active connections",
@@ -75,8 +82,8 @@ const EN = {
   // VPN
   "Обновить подписку": "Refresh subscription",
   "Добавьте подписку": "Add a subscription",
-  "Ссылка из бота или личного кабинета. Подходят Remnawave, Marzban, 3x-ui, а также ссылки vless://, vmess://, trojan://, ss://, hysteria2://":
-    "A link from your bot or dashboard. Remnawave, Marzban, 3x-ui and vless://, vmess://, trojan://, ss://, hysteria2:// links are supported",
+  "Ссылка из бота или личного кабинета. Подходят Remnawave, Marzban, 3x-ui, а также ссылки vless://, vmess://, trojan://, ss://, hysteria2://, wg://":
+    "A link from your bot or dashboard. Remnawave, Marzban, 3x-ui and vless://, vmess://, trojan://, ss://, hysteria2://, wg:// links are supported",
   "Отмена": "Cancel",
   "ОК": "OK",
   "Продолжить": "Continue",
@@ -84,7 +91,7 @@ const EN = {
   "Добавить": "Add",
   "Загружаю…": "Loading…",
   "Вставьте ссылку на подписку": "Paste a subscription link",
-  "Через VPN пойдут только заблокированные сайты. Яндекс, банки и Госуслуги — как обычно, напрямую.":
+  "Через VPN пойдут только заблокированные сайты. Яндекс, банки и Госуслуги - как обычно, напрямую.":
     "Only blocked sites go through VPN. Yandex, banks and Gosuslugi stay direct as usual.",
   "Подписка": "Subscription",
   "Проверить ещё раз": "Check again",
@@ -93,15 +100,20 @@ const EN = {
   "Удалить": "Remove",
   "Режим": "Mode",
   "Системный прокси": "System proxy",
-  "TUN — все программы": "TUN — all apps",
+  "TUN - все программы": "TUN - all apps",
   "Серверы": "Servers",
   "Проверить пинг": "Check ping",
   "Меряю…": "Measuring…",
+  "Поиск по серверам": "Search servers",
+  "Как в подписке": "As listed",
+  "По пингу": "By ping",
+  "По имени": "By name",
+  "Ничего не найдено": "Nothing found",
   "Через VPN": "Through VPN",
   "Только заблокированное": "Blocked only",
   "Всё, кроме российского": "All but Russian",
   "Свои сайты через VPN": "My sites through VPN",
-  "всё остальное — по базе блокировок": "everything else follows the block list",
+  "всё остальное - по базе блокировок": "everything else follows the block list",
   "подключено": "connected",
   "подключаюсь": "connecting",
   "ошибка": "error",
@@ -112,9 +124,9 @@ const EN = {
   "истекла": "expired",
   "до {x} · {y}": "until {x} · {y}",
   "бессрочно": "no expiry",
-  "Всё зарубежное — через VPN. Российские сайты, банки, Госуслуги, Яндекс и VK — напрямую.":
+  "Всё зарубежное - через VPN. Российские сайты, банки, Госуслуги, Яндекс и VK - напрямую.":
     "Everything foreign goes through VPN. Russian sites, banks, Gosuslugi, Yandex and VK stay direct.",
-  "Через VPN — только сайты из базы блокировок и сервисы, закрытые для России. Остальное напрямую.":
+  "Через VPN - только сайты из базы блокировок и сервисы, закрытые для России. Остальное напрямую.":
     "Only sites from the block list and services closed to Russia go through VPN. The rest is direct.",
   "Перехватывает все программы и игры. В системе появляется виртуальный адаптер.":
     "Captures all apps and games. A virtual network adapter appears in the system.",
@@ -136,6 +148,8 @@ const EN = {
   // обход
   "Проверка": "Check",
   "Проверить снова": "Check again",
+  "Свой сайт, например twitch.tv": "Your site, e.g. twitch.tv",
+  "Убрать": "Remove",
   "проверка": "checking",
   "не проверено": "not checked",
   "обход выключен": "unblocking is off",
@@ -143,7 +157,7 @@ const EN = {
   "не открывается": "doesn’t open",
   "Стратегия": "Strategy",
   "Подобрать автоматически": "Pick automatically",
-  "Подошли — выберите любую": "These work — pick any",
+  "Подошли - выберите любую": "These work - pick any",
   "Все стратегии": "All strategies",
   "подошло: {x}": "working: {x}",
   "Discord и YouTube": "Discord and YouTube",
@@ -151,10 +165,10 @@ const EN = {
   "только YouTube": "YouTube only",
   "Остановить подбор": "Stop picking",
   "Пробую {x} из {y}: ": "Trying {x} of {y}: ",
-  "Для подбора нужен обход — VPN будет выключен. Продолжить?": "Picking needs unblocking — VPN will be turned off. Continue?",
-  "Если сервис не открывается — выберите другую. Применяется сразу.": "If a service doesn’t open, pick another one. Applies immediately.",
+  "Для подбора нужен обход - VPN будет выключен. Продолжить?": "Picking needs unblocking - VPN will be turned off. Continue?",
+  "Если сервис не открывается - выберите другую. Применяется сразу.": "If a service doesn’t open, pick another one. Applies immediately.",
   "Игры": "Games",
-  "Порты для игр — включайте, если игра всё равно не подключается.": "Game ports — turn on if a game still can’t connect.",
+  "Порты для игр - включайте, если игра всё равно не подключается.": "Game ports - turn on if a game still can’t connect.",
   "Выкл": "Off",
   "Обновления": "Updates",
   "Обновлять zapret автоматически": "Update zapret automatically",
@@ -164,11 +178,11 @@ const EN = {
   "Свои домены для обхода": "My domains to unblock",
   "Свои списки": "My lists",
   "Всегда через VPN": "Always through VPN",
-  "домены, IP и программы — поверх всех правил": "domains, IPs and apps — above all rules",
+  "домены, IP и программы - поверх всех правил": "domains, IPs and apps - above all rules",
   "Всегда напрямую": "Always direct",
   "домены, IP и программы мимо VPN": "domains, IPs and apps bypassing VPN",
-  "По одному в строке: домен (example.com — с поддоменами; можно вставить ссылку), шаблон (yandex.*, img*.site.ru), regexp:… или keyword:слово, IP или подсеть (1.2.3.0/24), программа (Discord.exe — имя как в Диспетчере задач). Эти правила важнее всех остальных.": "One per line: a domain (example.com — with subdomains; links work too), a pattern (yandex.*, img*.site.ru), regexp:… or keyword:word, an IP or subnet (1.2.3.0/24), an app (Discord.exe — the name from Task Manager). These rules beat all others.",
-  "По одному в строке: домен, шаблон (yandex.*), regexp:…, keyword:…, IP или подсеть, программа (.exe). Всё это пойдёт мимо VPN, даже если сайт в базе блокировок. Если что-то есть в обоих списках — побеждает «напрямую».": "One per line: a domain, a pattern (yandex.*), regexp:…, keyword:…, an IP or subnet, an app (.exe). All of it bypasses VPN, even if the site is on the block list. If something is in both lists, “direct” wins.",
+  "По одному в строке: домен (example.com - с поддоменами; можно вставить ссылку), шаблон (yandex.*, img*.site.ru), regexp:… или keyword:слово, IP или подсеть (1.2.3.0/24), программа (Discord.exe - имя как в Диспетчере задач). Эти правила важнее всех остальных.": "One per line: a domain (example.com - with subdomains; links work too), a pattern (yandex.*, img*.site.ru), regexp:… or keyword:word, an IP or subnet (1.2.3.0/24), an app (Discord.exe - the name from Task Manager). These rules beat all others.",
+  "По одному в строке: домен, шаблон (yandex.*), regexp:…, keyword:…, IP или подсеть, программа (.exe). Всё это пойдёт мимо VPN, даже если сайт в базе блокировок. Если что-то есть в обоих списках - побеждает «напрямую».": "One per line: a domain, a pattern (yandex.*), regexp:…, keyword:…, an IP or subnet, an app (.exe). All of it bypasses VPN, even if the site is on the block list. If something is in both lists, “direct” wins.",
   "Домены для обхода": "Domains to unblock",
   "сайты, которые обход тоже будет чинить": "sites the unblocker will also fix",
   "Исключения: домены": "Exclusions: domains",
@@ -177,10 +191,10 @@ const EN = {
   "IP и подсети, которые обход не трогает": "IPs and subnets the unblocker leaves alone",
   "Сохранить": "Save",
   "Сохранено · записей: {x}": "Saved · entries: {x}",
-  "По одному домену в строке. Поддомены включаются сами (yandex.ru = *.yandex.ru); «^» в начале — только сам домен. Шаблоны и regexp тут не работают — их понимает только VPN. Строки с # — комментарии.": "One domain per line. Subdomains are included (yandex.ru = *.yandex.ru); a leading “^” means the domain only. Patterns and regexp don't work here — only VPN understands them. Lines starting with # are comments.",
+  "По одному домену в строке. Поддомены включаются сами (yandex.ru = *.yandex.ru); «^» в начале - только сам домен. Шаблоны и regexp тут не работают - их понимает только VPN. Строки с # - комментарии.": "One domain per line. Subdomains are included (yandex.ru = *.yandex.ru); a leading “^” means the domain only. Patterns and regexp don't work here - only VPN understands them. Lines starting with # are comments.",
   "Сайты, которые обход не трогает. По одному домену в строке.": "Sites the unblocker leaves alone. One domain per line.",
   "IP-адреса и подсети, которые обход не трогает: 1.2.3.4 или 1.2.3.0/24, по одному в строке.": "IP addresses and subnets the unblocker leaves alone: 1.2.3.4 or 1.2.3.0/24, one per line.",
-  "Эти сайты всегда открываются через VPN. По одному домену в строке; можно вставлять ссылки — домен возьмётся сам.": "These sites always go through VPN. One domain per line; you can paste links — the domain is taken automatically.",
+  "Эти сайты всегда открываются через VPN. По одному домену в строке; можно вставлять ссылки - домен возьмётся сам.": "These sites always go through VPN. One domain per line; you can paste links - the domain is taken automatically.",
 
   // настройки
   "Разделы": "Sections",
@@ -188,7 +202,7 @@ const EN = {
   "Тема": "Theme",
   "Защищённый DNS": "Secure DNS",
   "Включить защищённый DNS": "Turn on secure DNS",
-  "DNS-запросы шифруются (DoH) — провайдер не сможет подменить адрес сайта. Прежние настройки сетевых карт вернутся при выключении.": "DNS queries are encrypted (DoH) — your ISP can't spoof site addresses. Previous adapter settings come back when you turn it off.",
+  "DNS-запросы шифруются (DoH) - провайдер не сможет подменить адрес сайта. Прежние настройки сетевых карт вернутся при выключении.": "DNS queries are encrypted (DoH) - your ISP can't spoof site addresses. Previous adapter settings come back when you turn it off.",
   "В этой версии Windows шифрование DNS недоступно: будут только серверы выбранного сервиса. Прежние настройки вернутся при выключении.": "This Windows version can't encrypt DNS: only the chosen service's servers will be used. Previous settings come back when you turn it off.",
   "DNS провайдера не отдаёт адрес {x}: в браузере сайт может не открыться, даже если обход работает.": "Your ISP's DNS doesn't return the address of {x}: the site may not open in the browser even though unblocking works.",
   "Как в системе": "System",
@@ -223,7 +237,7 @@ const EN = {
   "Для всех": "All",
   "Обновить список адресов": "Update address list",
   "обновлён {x}": "updated {x}",
-  "сейчас — список из zapret": "currently the list bundled with zapret",
+  "сейчас - список из zapret": "currently the list bundled with zapret",
   "Записи hosts для Discord и Telegram": "Hosts entries for Discord and Telegram",
   "если они не грузятся даже с обходом; адреса закрепляются и обновляются при каждом запуске": "if they do not load even with unblocking; addresses are pinned and refreshed on every start",
   "Скачиваю…": "Downloading…",
@@ -233,6 +247,14 @@ const EN = {
   "Починка добавит в файл hosts адреса Discord и Telegram из zapret-discord-youtube. Они закрепляют сайты за конкретными адресами: если адрес сменится, сайт не откроется до следующего обновления (при запуске Починки). Выключение убирает только эти записи.": "Pochinka will add Discord and Telegram addresses from zapret-discord-youtube to the hosts file. They pin the sites to specific addresses: if an address changes, the site will not open until the next refresh (when Pochinka starts). Turning this off removes only these entries.",
   "Проверить обновления": "Check for updates",
   "Позже": "Later",
+  "Создать резервную копию": "Create a backup",
+  "настройки, подписки и списки в один файл": "settings, subscriptions and lists in one file",
+  "Восстановить из копии": "Restore from backup",
+  "заменит настройки и перезапустит программу": "replaces the settings and restarts the app",
+  "Восстановить настройки из этой копии? Текущие настройки, подписки и списки будут заменены, программа перезапустится.": "Restore settings from this backup? Current settings, subscriptions and lists will be replaced and the app will restart.",
+  "Восстановить": "Restore",
+  "Сохранено": "Saved",
+  "Не удалось сохранить: {x}": "Couldn't save: {x}",
   "Не удалось проверить обновления: {x}": "Couldn't check for updates: {x}",
   "У вас последняя версия: {x}": "You have the latest version: {x}",
   "Доступна версия {x}. Обновить сейчас?": "Version {x} is available. Update now?",
@@ -240,12 +262,29 @@ const EN = {
   "Выйти из программы": "Quit the app",
   "Удалить Починку": "Uninstall Pochinka",
   "убрать программу, её настройки и всё, что она меняла": "remove the app, its settings and everything it changed",
-  "Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную.": "Uninstall Pochinka? Unblocking, VPN and the Telegram proxy will be turned off, Windows proxy settings restored, and the app copy, subscriptions, settings and logs deleted. The exe you downloaded stays — you can delete it manually.",
+  "Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется - его можно удалить вручную.": "Uninstall Pochinka? Unblocking, VPN and the Telegram proxy will be turned off, Windows proxy settings restored, and the app copy, subscriptions, settings and logs deleted. The exe you downloaded stays - you can delete it manually.",
   "Запускать вместе с Windows": "Start with Windows",
   "сразу в трей, без окна": "straight to the tray, no window",
+  "Показывать уведомления": "Show notifications",
+  "о подключении, отключении, ошибках и обновлениях": "about connections, disconnections, errors and updates",
+  "Горячие клавиши": "Hotkeys",
+  "Работают из любого места, даже когда окно скрыто. Нажмите «Изменить» и наберите сочетание; Esc - отмена.": "They work from anywhere, even when the window is hidden. Press “Change” and type a combination; Esc cancels.",
+  "Действия": "Actions",
+  "Включить/выключить всё": "Toggle everything",
+  "главная кнопка - последний использованный режим": "the main button - the last used mode",
+  "подписка и выбранный сервер": "the subscription and selected server",
+  "Изменить": "Change",
+  "нажмите сочетание…": "press a combination…",
+  "настроено: {x}": "configured: {x}",
+  "выключены": "off",
+  "VPN": "VPN",
+  "Kill Switch": "Kill Switch",
+  "пока VPN включён, другой трафик в интернет не выходит": "while VPN is on, other traffic can't reach the internet",
+  "блокирует всё, кроме VPN: при обрыве соединения ничего не утечёт напрямую": "blocks everything except VPN: nothing leaks directly if the connection drops",
+  "не включился - посмотрите журнал": "failed to start - check the log",
 };
 
-// t — перевод строки с подстановкой {x}, {y}.
+// t - перевод строки с подстановкой {x}, {y}.
 function t(s, x, y) {
   let r = LANG === "en" && EN[s] !== undefined ? EN[s] : s;
   if (x !== undefined) r = r.replace("{x}", x);
@@ -253,7 +292,7 @@ function t(s, x, y) {
   return r;
 }
 
-// plural — «1 день / 2 дня / 5 дней», по-английски day/days.
+// plural - «1 день / 2 дня / 5 дней», по-английски day/days.
 function plural(n, one, few, many) {
   if (LANG === "en") return n === 1 ? "day" : "days";
   const m10 = n % 10, m100 = n % 100;

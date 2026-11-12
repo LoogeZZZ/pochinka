@@ -35,7 +35,7 @@ func newRunner(onState func(bool, error)) (*runner, error) {
 
 // start запускает winws из dir с аргументами args. Возвращает ошибку, если
 // процесс не прожил и пары секунд (типичный случай: WinDivert не загрузился
-// или антивирус снёс файл) — тогда смысла крутить перезапуски нет.
+// или антивирус снёс файл) - тогда смысла крутить перезапуски нет.
 func (r *runner) start(dir string, args []string) error {
 	r.stop()
 
@@ -127,7 +127,7 @@ func (r *runner) supervise(exe, dir string, args []string, stopped, done chan st
 			default:
 			}
 			e := explainExit(err, tail.String())
-			applog.Printf("zapret: winws упал: %v — перезапуск через %v", e, backoff)
+			applog.Printf("zapret: winws упал: %v - перезапуск через %v", e, backoff)
 			r.notify(false, e)
 			if time.Since(startedAt) < 10*time.Second {
 				fastFails++
@@ -221,7 +221,7 @@ func explainExit(err error, output string) error {
 	case strings.Contains(low, "windivert") && strings.Contains(low, "577"):
 		return errors.New("WinDivert: драйвер заблокирован (проверь Secure Boot / антивирус)")
 	case strings.Contains(low, "windivert") && strings.Contains(low, "1275"):
-		return errors.New("WinDivert: драйвер заблокирован системой — нужна перезагрузка или удаление конфликтующей программы")
+		return errors.New("WinDivert: драйвер заблокирован системой - нужна перезагрузка или удаление конфликтующей программы")
 	case strings.Contains(low, "windivert"):
 		return errors.New("WinDivert не запустился: " + output)
 	}

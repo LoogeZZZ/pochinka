@@ -1,5 +1,5 @@
-// Связь с Go: window.go.app.App.* — методы, window.runtime.* — окно и события.
-// Перевод (t, plural, translateStatic, LANG) — в i18n.js.
+// Связь с Go: window.go.app.App.* - методы, window.runtime.* - окно и события.
+// Перевод (t, plural, translateStatic, LANG) - в i18n.js.
 const api = () => window.go.app.App;
 const $ = (id) => document.getElementById(id);
 

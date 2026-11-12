@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// LIVE_CACHE=C:\ProgramData\Pochinka\vpn-cache.json — проверка настоящих
+// LIVE_CACHE=C:\ProgramData\Pochinka\vpn-cache.json - проверка настоящих
 // серверов подписки: поднимаем xray на тестовых портах и ходим через него.
 func TestLiveServers(t *testing.T) {
 	path := os.Getenv("LIVE_CACHE")
@@ -51,8 +51,8 @@ func TestLiveServers(t *testing.T) {
 		cl := &http.Client{Timeout: 12 * time.Second, Transport: &http.Transport{Proxy: http.ProxyURL(pu)}}
 		var res []string
 		for _, target := range []string{
-			"https://ifconfig.me/ip",                   // через VPN — IP выхода
-			"https://www.cloudflare.com/cdn-cgi/trace", // через VPN — страна выхода
+			"https://ifconfig.me/ip",                   // через VPN - IP выхода
+			"https://www.cloudflare.com/cdn-cgi/trace", // через VPN - страна выхода
 			"https://www.instagram.com/",               // через VPN (ru-blocked)
 			"https://ya.ru/",                           // напрямую
 		} {

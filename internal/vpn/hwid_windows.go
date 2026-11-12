@@ -16,7 +16,7 @@ import (
 	"pochinka/internal/paths"
 )
 
-// DeviceInfo — что клиент сообщает панели о себе при загрузке подписки.
+// DeviceInfo - что клиент сообщает панели о себе при загрузке подписки.
 // Стандарт заголовков задал Happ; по ним Remnawave (HWID Device Limit)
 // считает устройства и без x-hwid отдаёт 404.
 type DeviceInfo struct {
@@ -31,7 +31,7 @@ var (
 	device     DeviceInfo
 )
 
-// Device — сведения об этом компьютере (считаются один раз).
+// Device - сведения об этом компьютере (считаются один раз).
 func Device() DeviceInfo {
 	deviceOnce.Do(func() {
 		device = DeviceInfo{HWID: hwid(), OS: "Windows", OSVersion: osVersion(), Model: deviceModel()}
@@ -39,7 +39,7 @@ func Device() DeviceInfo {
 	return device
 }
 
-// hwid — постоянный идентификатор устройства: хеш MachineGuid (меняется
+// hwid - постоянный идентификатор устройства: хеш MachineGuid (меняется
 // только при переустановке Windows) с нашей солью. Сам MachineGuid наружу
 // не уходит, и с HWID других программ наш не совпадает. Формат подходит под
 // проверку Remnawave: ^[a-zA-Z0-9=-]{10,64}$.
@@ -53,7 +53,7 @@ func hwid() string {
 			return hex.EncodeToString(sum[:16])
 		}
 	}
-	// Без MachineGuid — случайный, но запомненный: иначе каждый запуск был
+	// Без MachineGuid - случайный, но запомненный: иначе каждый запуск был
 	// бы «новым устройством» и съедал лимит.
 	p := filepath.Join(paths.DataDir(), "hwid")
 	if b, err := os.ReadFile(p); err == nil && validHWID(strings.TrimSpace(string(b))) {
@@ -83,7 +83,7 @@ func osVersion() string {
 	return fmt.Sprintf("%d.%d.%d", v.MajorVersion, v.MinorVersion, v.BuildNumber)
 }
 
-// deviceModel — модель из BIOS («Micro-Star MS-7D25»), чтобы в панели было
+// deviceModel - модель из BIOS («Micro-Star MS-7D25»), чтобы в панели было
 // видно, что за устройство. Заглушки производителей отбрасываем.
 func deviceModel() string {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `HARDWARE\DESCRIPTION\System\BIOS`, registry.QUERY_VALUE)
@@ -108,7 +108,7 @@ func deviceModel() string {
 	return clipText(strings.Join(parts, " "), 64)
 }
 
-// asciiClean — только печатный ASCII: значение уходит в HTTP-заголовок.
+// asciiClean - только печатный ASCII: значение уходит в HTTP-заголовок.
 func asciiClean(s string) string {
 	var b strings.Builder
 	for _, c := range s {

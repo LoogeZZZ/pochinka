@@ -16,9 +16,9 @@ import (
 	"time"
 )
 
-// LIVE_TG=1 — диагностика: каждый путь до каждого дата-центра по отдельности
+// LIVE_TG=1 - диагностика: каждый путь до каждого дата-центра по отдельности
 // (WS-фронт, Cloudflare, прямой TCP; обычные соединения и медиа). Ничего не
-// роняет, в конце печатает таблицу — её и присылать.
+// роняет, в конце печатает таблицу - её и присылать.
 //
 //	go test ./internal/tgproxy -run TestLiveDiag -v -count=1
 func TestLiveDiag(t *testing.T) {
@@ -89,7 +89,7 @@ func dcName(dc int) string {
 	return fmt.Sprintf("DC%d       ", dc)
 }
 
-// probe — первый шаг авторизации MTProto (req_pq_multi) через прокси;
+// probe - первый шаг авторизации MTProto (req_pq_multi) через прокси;
 // ответ resPQ с нашим nonce значит, что путь до Telegram живой.
 func probe(addr string, dc int) (time.Duration, error) {
 	start := time.Now()
@@ -129,7 +129,7 @@ func probe(addr string, dc int) (time.Duration, error) {
 	return time.Since(start), nil
 }
 
-// LIVE_TG=1 — фронт 149.154.167.220 молча режут (как у многих в РФ), прямой
+// LIVE_TG=1 - фронт 149.154.167.220 молча режут (как у многих в РФ), прямой
 // TCP тоже: соединения должны быстро уходить на Cloudflare, а не ждать таймаут.
 func TestLiveDeadFront(t *testing.T) {
 	if os.Getenv("LIVE_TG") == "" {
@@ -162,7 +162,7 @@ func TestLiveDeadFront(t *testing.T) {
 			}
 			t.Logf("%s: %v", dcName(dc), d.Round(time.Millisecond))
 			if d > 5*time.Second {
-				t.Errorf("%s ждал %v — висит на мёртвом фронте", dcName(dc), d)
+				t.Errorf("%s ждал %v - висит на мёртвом фронте", dcName(dc), d)
 			}
 		}
 	}

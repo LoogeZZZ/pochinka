@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Защищённый DNS (DNS-over-HTTPS) — по IP, без системного DNS: он-то и
+// Защищённый DNS (DNS-over-HTTPS) - по IP, без системного DNS: он-то и
 // может быть сломан. Сертификаты этих серверов выписаны и на IP-адреса.
 var dohServers = []string{
 	"https://8.8.8.8/resolve",   // Google, JSON API
@@ -20,7 +20,7 @@ var dohServers = []string{
 
 var dohClient = &http.Client{Timeout: 6 * time.Second, Transport: &http.Transport{Proxy: nil}}
 
-// ResolveDoH — IPv4-адрес имени через защищённый DNS.
+// ResolveDoH - IPv4-адрес имени через защищённый DNS.
 func ResolveDoH(ctx context.Context, host string) (net.IP, error) {
 	var last error
 	for _, srv := range dohServers {

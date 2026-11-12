@@ -11,6 +11,7 @@ import (
 
 	"pochinka/internal/applog"
 	"pochinka/internal/install"
+	"pochinka/internal/notify"
 	"pochinka/internal/paths"
 	"pochinka/internal/selfupdate"
 )
@@ -19,9 +20,9 @@ import (
 // версия новее, показываем плашку. «Обновить» скачивает её, проверяет
 // подпись (selfupdate) и ставит вместо текущей (install).
 
-// AppUpdate — плашка обновления в окне.
+// AppUpdate - плашка обновления в окне.
 type AppUpdate struct {
-	Version string `json:"version"` // "1.0.2"; пусто — обновлений нет
+	Version string `json:"version"` // "1.0.2"; пусто - обновлений нет
 	URL     string `json:"url"`     // страница релиза
 	Tag     string `json:"-"`       // "v1.0.2"
 
@@ -30,7 +31,7 @@ type AppUpdate struct {
 	Error    string `json:"error"`
 }
 
-// watchAppUpdates — первая проверка через минуту после старта (не мешаем
+// watchAppUpdates - первая проверка через минуту после старта (не мешаем
 // подключению), дальше раз в 6 часов.
 func (a *App) watchAppUpdates() {
 	delay := time.Minute
@@ -41,12 +42,12 @@ func (a *App) watchAppUpdates() {
 		case <-time.After(delay):
 		}
 		delay = 6 * time.Hour
-		_, _ = a.checkAppUpdate() // нет сети или GitHub недоступен — спросим позже
+		_, _ = a.checkAppUpdate() // нет сети или GitHub недоступен - спросим позже
 	}
 }
 
 // checkAppUpdate спрашивает GitHub и обновляет плашку. Возвращает новую
-// версию ("" — уже последняя).
+// версию ("" - уже последняя).
 func (a *App) checkAppUpdate() (string, error) {
 	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
 	defer cancel()
@@ -55,7 +56,7 @@ func (a *App) checkAppUpdate() (string, error) {
 		return "", err
 	}
 	a.mu.Lock()
-	if a.appUpdate.Busy { // идёт установка — не мешаем
+	if a.appUpdate.Busy { // идёт установка - не мешаем
 		a.mu.Unlock()
 		return r.Version, nil
 	}
@@ -65,19 +66,20 @@ func (a *App) checkAppUpdate() (string, error) {
 	if changed {
 		if r.Version != "" {
 			applog.Printf("доступна новая версия Починки: %s", r.Version)
+			notify.Show(notify.Text("Доступна новая версия Починки", "A new Pochinka version is available"), r.Version)
 		}
 		a.emitState()
 	}
 	return r.Version, nil
 }
 
-// UpdateCheck — ответ кнопки «Проверить обновления».
+// UpdateCheck - ответ кнопки «Проверить обновления».
 type UpdateCheck struct {
-	Version string `json:"version"` // новая версия; пусто — обновлений нет
+	Version string `json:"version"` // новая версия; пусто - обновлений нет
 	Error   string `json:"error"`
 }
 
-// CheckAppUpdate — кнопка «Проверить обновления» в настройках.
+// CheckAppUpdate - кнопка «Проверить обновления» в настройках.
 func (a *App) CheckAppUpdate() UpdateCheck {
 	v, err := a.checkAppUpdate()
 	if err != nil {
@@ -87,7 +89,7 @@ func (a *App) CheckAppUpdate() UpdateCheck {
 	return UpdateCheck{Version: v}
 }
 
-// OpenAppUpdate — открыть страницу новой версии.
+// OpenAppUpdate - открыть страницу новой версии.
 func (a *App) OpenAppUpdate() {
 	a.mu.Lock()
 	u := a.appUpdate
@@ -97,7 +99,7 @@ func (a *App) OpenAppUpdate() {
 	}
 }
 
-// InstallAppUpdate — кнопка «Обновить»: скачать, проверить подпись,
+// InstallAppUpdate - кнопка «Обновить»: скачать, проверить подпись,
 // заменить программу и перезапуститься. Включённое восстановится само.
 func (a *App) InstallAppUpdate() string {
 	a.mu.Lock()
@@ -140,7 +142,7 @@ func (a *App) installUpdate(u AppUpdate) error {
 	if err != nil {
 		return err
 	}
-	applog.Printf("обновление %s скачано, подпись верна — устанавливаю", u.Version)
+	applog.Printf("обновление %s скачано, подпись верна - устанавливаю", u.Version)
 
 	inst, err := install.InstalledExe()
 	if err != nil {
@@ -149,7 +151,7 @@ func (a *App) installUpdate(u AppUpdate) error {
 	if err := install.ReplaceExe(exe, inst); err != nil {
 		return err
 	}
-	// Новый экземпляр — после выхода этого: иначе он увидит работающий старый
+	// Новый экземпляр - после выхода этого: иначе он увидит работающий старый
 	// (одна копия на компьютер), передаст ему управление и закроется.
 	if err := install.StartAfterExit(inst); err != nil {
 		return err

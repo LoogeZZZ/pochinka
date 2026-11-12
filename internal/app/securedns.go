@@ -6,9 +6,9 @@ import (
 	"pochinka/internal/securedns"
 )
 
-// SecureDNSState — для окна.
+// SecureDNSState - для окна.
 type SecureDNSState struct {
-	Provider string `json:"provider"` // "" — выключен
+	Provider string `json:"provider"` // "" - выключен
 	DoH      bool   `json:"doh"`      // шифрование доступно (Windows 11)
 	Error    string `json:"error"`
 }
@@ -20,7 +20,7 @@ func (a *App) secureDNSState() SecureDNSState {
 	return SecureDNSState{Provider: config.Load().SecureDNS, DoH: securedns.DoHSupported(), Error: e}
 }
 
-// SetSecureDNS: "" — выключить (вернуть прежние DNS), google | cloudflare | quad9.
+// SetSecureDNS: "" - выключить (вернуть прежние DNS), google | cloudflare | quad9.
 func (a *App) SetSecureDNS(id string) string {
 	var err error
 	if id == "" {
@@ -35,7 +35,7 @@ func (a *App) SetSecureDNS(id string) string {
 		msg = err.Error()
 		applog.Printf("защищённый DNS: %v", err)
 	} else if id == "" {
-		applog.Printf("защищённый DNS выключен — прежние настройки возвращены")
+		applog.Printf("защищённый DNS выключен - прежние настройки возвращены")
 	} else {
 		applog.Printf("защищённый DNS: %s", id)
 	}
@@ -52,7 +52,7 @@ func (a *App) SetSecureDNS(id string) string {
 	return msg
 }
 
-// ensureSecureDNS — при запуске: если включён, применить и к картам,
+// ensureSecureDNS - при запуске: если включён, применить и к картам,
 // появившимся с прошлого раза (новый Wi‑Fi адаптер и т.п.).
 func (a *App) ensureSecureDNS() {
 	id := config.Load().SecureDNS

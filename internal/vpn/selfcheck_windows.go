@@ -57,14 +57,14 @@ func (m *Manager) SelfCheck(ctx context.Context) {
 			msg = "VPN работает, но интернет перехватывает «" + foreign + "». Выключите его."
 		} else if mode == ModeProxy && !systemProxyIsOurs(port) {
 			ok = false
-			msg = "VPN работает, но системный прокси перехватила другая программа — браузер идёт мимо VPN."
+			msg = "VPN работает, но системный прокси перехватила другая программа - браузер идёт мимо VPN."
 		} else if h := BrowserProxyHijackers(); mode == ModeProxy && len(h) > 0 {
 			ok = false
 			msg = "VPN работает, но браузер идёт мимо него: прокси браузера перехватывает «" + strings.Join(h, "», «") +
-				"». Отключите это расширение — или включите режим TUN, ему расширения не мешают."
+				"». Отключите это расширение - или включите режим TUN, ему расширения не мешают."
 		}
 	}
-	applog.Printf("vpn: самопроверка — %s", msg)
+	applog.Printf("vpn: самопроверка - %s", msg)
 	m.set(func(s *State) { s.Check, s.CheckOK = msg, ok })
 }
 

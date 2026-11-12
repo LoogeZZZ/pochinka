@@ -7,7 +7,7 @@ import "encoding/binary"
 // web.telegram.org; сервер ждёт кадр = пакет).
 //
 // Режем по расшифрованному (plain) потоку, а отдаём зашифрованные для
-// Telegram байты тех же позиций. Если формат не распознан — отключаемся и
+// Telegram байты тех же позиций. Если формат не распознан - отключаемся и
 // дальше шлём как есть.
 type splitter struct {
 	tag      [4]byte
@@ -51,7 +51,7 @@ func (s *splitter) split(chunk, plain []byte) [][]byte {
 	return parts
 }
 
-// flush — остаток при закрытии соединения.
+// flush - остаток при закрытии соединения.
 func (s *splitter) flush() []byte {
 	if len(s.cipher) == 0 {
 		return nil
@@ -61,8 +61,8 @@ func (s *splitter) flush() []byte {
 	return t
 }
 
-// nextLen: длина следующего пакета; ok=false — ещё не хватает данных;
-// n<=0 — формат не распознан.
+// nextLen: длина следующего пакета; ok=false - ещё не хватает данных;
+// n<=0 - формат не распознан.
 func (s *splitter) nextLen(off int) (n int, ok bool) {
 	avail := len(s.plain) - off
 	if avail <= 0 {

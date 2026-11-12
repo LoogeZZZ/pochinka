@@ -10,10 +10,10 @@ import (
 
 // Адреса фронта web.telegram.org: на него ходят WebSocket-соединения
 // kwsN.web.telegram.org. Как в оригинале: DC2 и DC4 через 149.154.167.220,
-// остальные DC — запасными путями (Cloudflare, прямой TCP).
+// остальные DC - запасными путями (Cloudflare, прямой TCP).
 var defaultDCRedirects = map[int]string{2: "149.154.167.220", 4: "149.154.167.220"}
 
-// Прямые адреса дата-центров — последний запасной путь (обычный MTProto по TCP).
+// Прямые адреса дата-центров - последний запасной путь (обычный MTProto по TCP).
 var dcDirectIPs = map[int]string{
 	1: "149.154.175.50", 2: "149.154.167.51", 3: "149.154.175.100",
 	4: "149.154.167.91", 5: "149.154.171.5", 203: "91.105.192.100",
@@ -56,7 +56,7 @@ type wsPool struct {
 	refilling map[poolKey]bool
 	retryAt   map[poolKey]time.Time
 	failures  map[poolKey]int
-	fronting  bool // в прошлый раз сработал фронтинг — пробуем его первым
+	fronting  bool // в прошлый раз сработал фронтинг - пробуем его первым
 	closed    bool
 }
 
@@ -69,7 +69,7 @@ func (wp *wsPool) target(dc int) string {
 	return wp.p.dcRedirects[dc]
 }
 
-// get отдаёт готовое соединение или nil (тогда — запасные пути).
+// get отдаёт готовое соединение или nil (тогда - запасные пути).
 func (wp *wsPool) get(key poolKey) *wsConn {
 	if wp.target(key.dc) == "" {
 		return nil
@@ -90,7 +90,7 @@ func (wp *wsPool) get(key poolKey) *wsConn {
 	if got != nil {
 		return got
 	}
-	// Пул пуст. Пока фронт не подводил, подключаемся сразу — чтобы первые
+	// Пул пуст. Пока фронт не подводил, подключаемся сразу - чтобы первые
 	// соединения после запуска не уходили на запасной путь. Но если он уже
 	// не ответил, сразу запасные пути: иначе каждое соединение Telegram ждало
 	// бы таймаут (8 с) к фронту, который режут.
@@ -106,7 +106,7 @@ func (wp *wsPool) get(key poolKey) *wsConn {
 	return ws
 }
 
-// failing — фронт для key не ответил и с тех пор не оживал. Ожил ли он,
+// failing - фронт для key не ответил и с тех пор не оживал. Ожил ли он,
 // проверяет только фоновая докачка пула (с паузами), а не соединения Telegram.
 func (wp *wsPool) failing(key poolKey) bool {
 	wp.mu.Lock()
@@ -114,7 +114,7 @@ func (wp *wsPool) failing(key poolKey) bool {
 	return wp.failures[key] > 0
 }
 
-// fail запоминает неудачу: следующая попытка — с растущей паузой, до 15 минут.
+// fail запоминает неудачу: следующая попытка - с растущей паузой, до 15 минут.
 func (wp *wsPool) fail(key poolKey) {
 	wp.mu.Lock()
 	defer wp.mu.Unlock()
@@ -181,7 +181,7 @@ func (wp *wsPool) refill(key poolKey) {
 	}()
 }
 
-// connect: WS к фронту Telegram — сначала с честным SNI, потом фронтингом
+// connect: WS к фронту Telegram - сначала с честным SNI, потом фронтингом
 // (или наоборот, если в прошлый раз сработал фронтинг).
 func (wp *wsPool) connect(ctx context.Context, key poolKey) (*wsConn, error) {
 	addr := net.JoinHostPort(wp.target(key.dc), "443")
@@ -216,7 +216,7 @@ func (wp *wsPool) connect(ctx context.Context, key poolKey) (*wsConn, error) {
 	return nil, lastErr
 }
 
-// warmup — заранее открыть соединения к DC с фронтом.
+// warmup - заранее открыть соединения к DC с фронтом.
 func (wp *wsPool) warmup() {
 	for dc := range wp.p.dcRedirects {
 		wp.refill(poolKey{dc: dc})

@@ -25,7 +25,7 @@ function render(s) {
   $("updatePage").textContent = t(up.error ? "Скачать вручную" : "Что нового");
   $("conflictNote").hidden = !s.conflict;
   $("conflictNote").textContent = s.conflict
-    ? t("Работает другой VPN — «{x}». Выключите его: два VPN мешают друг другу, и сайты не грузятся.", s.conflict)
+    ? t("Работает другой VPN - «{x}». Выключите его: два VPN мешают друг другу, и сайты не грузятся.", s.conflict)
     : "";
 
   // ----- главная кнопка -----
@@ -53,6 +53,12 @@ function render(s) {
   renderVpnView(s);
   renderZapretView(s);
   renderSettings(s);
+  renderHotkeys();
+  // Первый запуск: ничего ещё не настроено - показываем подсказку.
+  if (!welcomeShown && maybeWelcome()) {
+    welcomeShown = true;
+    show("viewWelcome");
+  }
 }
 
 function renderZapretModule(s) {
@@ -71,10 +77,10 @@ function renderZapretModule(s) {
       if (d && y) {
         const bad = [d.ok ? null : "Discord", y.ok ? null : "YouTube"].filter(Boolean);
         if (bad.length === 0) { sub.textContent = t("Discord и YouTube открываются"); sub.className = "okline"; }
-        else sub.textContent = t("{x} не открывается — смените стратегию", bad.join(t(" и ")));
+        else sub.textContent = t("{x} не открывается - смените стратегию", bad.join(t(" и ")));
       } else sub.textContent = t("Стратегия: {x}", prettyName(z.strategy));
     }
-  } else sub.textContent = ["running", "starting"].includes(s.vpn.status) ? t("Выключен — сейчас работает VPN") : t("Discord, YouTube, игры");
+  } else sub.textContent = ["running", "starting"].includes(s.vpn.status) ? t("Выключен - сейчас работает VPN") : t("Discord, YouTube, игры");
 }
 
 function serverName(v, id) {
@@ -95,7 +101,7 @@ function renderTg(s) {
   else if (!tg.running) sub.textContent = t("Прокси для Telegram Desktop");
   else if (st.active > 0) { sub.textContent = t("Подключён · соединений: {x}", st.active); sub.className = "okline"; }
   else if (st.total > 0) sub.textContent = t("Прокси работает · Telegram не подключён");
-  else sub.textContent = t("Прокси готов — нажмите «Подключить Telegram»");
+  else sub.textContent = t("Прокси готов - нажмите «Подключить Telegram»");
 
   $("tgAddr").textContent = "127.0.0.1:" + (tg.port || 1443);
   const pill = $("tgPill");
@@ -103,11 +109,11 @@ function renderTg(s) {
   pill.textContent = t(!tg.running ? "выключен" : st.active > 0 ? "подключён" : "ожидает Telegram");
   $("tgConnect").disabled = !tg.installed;
   $("tgHint").textContent = tg.installed
-    ? t("Telegram спросит «Подключить прокси?» — нажмите «Подключить».")
+    ? t("Telegram спросит «Подключить прокси?» - нажмите «Подключить».")
     : t("Установите Telegram Desktop с desktop.telegram.org, затем нажмите кнопку.");
-  $("tgActive").textContent = tg.running ? t("{x} (всего {y})", st.active || 0, st.total || 0) : "—";
-  $("tgPaths").textContent = tg.running ? (st.viaWs || 0) + " / " + (st.viaCf || 0) + " / " + (st.viaTcp || 0) : "—";
-  $("tgTraffic").textContent = tg.running ? fmtBytes(st.bytesUp || 0) + " / " + fmtBytes(st.bytesDown || 0) : "—";
+  $("tgActive").textContent = tg.running ? t("{x} (всего {y})", st.active || 0, st.total || 0) : "-";
+  $("tgPaths").textContent = tg.running ? (st.viaWs || 0) + " / " + (st.viaCf || 0) + " / " + (st.viaTcp || 0) : "-";
+  $("tgTraffic").textContent = tg.running ? fmtBytes(st.bytesUp || 0) + " / " + fmtBytes(st.bytesDown || 0) : "-";
 }
 
 function renderVpnModule(s) {
@@ -124,10 +130,10 @@ function renderVpnModule(s) {
     const sv = (v.servers || []).find((x) => x.name === v.active);
     const ping = sv && sv.ping > 0 ? " · " + t("{x} мс", sv.ping) : "";
     sub.textContent = (v.active || t("Авто")) + ping + (v.mode === "tun" ? " · TUN" : "");
-    // Самопроверка не прошла — показываем причину прямо на главной.
+    // Самопроверка не прошла - показываем причину прямо на главной.
     if (v.check && !v.checkOk && !v.check.startsWith("Проверяю")) {
       sub.textContent = v.check;
       mod.className = "module link err";
     }
-  } else sub.textContent = ACTIVE.includes(s.zapret.status) ? t("Выключен — сейчас работает обход") : t("{x} · выключен", serverName(v, v.selected));
+  } else sub.textContent = ACTIVE.includes(s.zapret.status) ? t("Выключен - сейчас работает обход") : t("{x} · выключен", serverName(v, v.selected));
 }

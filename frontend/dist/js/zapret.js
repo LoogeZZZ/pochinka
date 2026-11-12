@@ -1,5 +1,9 @@
 // ---------------- обход блокировок (zapret) ----------------
 
+// Проверка доступности: встроенные сервисы + свои сайты из настроек.
+const CHECK_KEYS = ["discord", "youtube", "twitch"];
+const CHECK_NAMES = { discord: "Discord", youtube: "YouTube", twitch: "Twitch" };
+
 function renderZapretView(s) {
   const z = s.zapret;
   const pk = s.pick || {};
@@ -13,7 +17,32 @@ function renderZapretView(s) {
       (pk.found ? " · " + t("подошло: {x}", pk.found) : "")
     : pk.result || "";
   renderPickList(pk, z.strategy);
-  for (const li of document.querySelectorAll(".services li[data-key]")) {
+
+  // Список проверок: встроенные и свои (одним блоком, строка ввода - в конце
+  // того же списка); свои можно убрать крестиком.
+  const keys = CHECK_KEYS.concat(s.config.checkSites || []);
+  const sul = $("services");
+  const sig = keys.join("|") + "|" + LANG;
+  if (sul.dataset.sig !== sig) {
+    for (const old of sul.querySelectorAll("li[data-key]")) old.remove();
+    for (const k of keys) {
+      const li = document.createElement("li");
+      li.dataset.key = k;
+      const custom = !CHECK_KEYS.includes(k);
+      li.innerHTML = "<span></span>" +
+        '<span class="val">-</span>' +
+        (custom ? '<button class="link rm" title="Убрать">×</button>' : "");
+      li.firstChild.textContent = CHECK_NAMES[k] || k;
+      if (custom) li.querySelector(".rm").addEventListener("click", () => guarded(async () => {
+        const sites = (S.config.checkSites || []).filter((x) => x !== k);
+        const r = await api().SetCheckSites(sites);
+        if (r) notify(r);
+      }));
+      sul.insertBefore(li, $("checkSiteRow"));
+    }
+    sul.dataset.sig = sig;
+  }
+  for (const li of sul.querySelectorAll("li[data-key]")) {
     const r = s.checks[li.dataset.key];
     const val = li.querySelector(".val");
     li.className = "";
@@ -23,7 +52,7 @@ function renderZapretView(s) {
     else { li.classList.add("bad"); val.textContent = r.detail || t("не открывается"); }
   }
   $("recheck").disabled = s.checking || z.status !== "running";
-  const dnsBad = Object.entries(s.checks || {}).filter(([, r]) => r && r.dnsBlocked).map(([k]) => (k === "youtube" ? "YouTube" : k === "discord" ? "Discord" : k));
+  const dnsBad = Object.entries(s.checks || {}).filter(([, r]) => r && r.dnsBlocked).map(([k]) => (CHECK_NAMES[k] || k));
   const sdOn = !!(s.secureDns && s.secureDns.provider);
   $("dnsNote").hidden = !dnsBad.length;
   $("dnsNoteText").textContent = dnsBad.length
@@ -33,8 +62,8 @@ function renderZapretView(s) {
 
   const ul = $("strategies");
   const names = z.strategies && z.strategies.length ? z.strategies : [z.strategy];
-  const sig = names.join("|") + "|" + LANG;
-  if (ul.dataset.list !== sig) {
+  const ssig = names.join("|") + "|" + LANG;
+  if (ul.dataset.list !== ssig) {
     ul.innerHTML = "";
     for (const n of names) {
       const li = document.createElement("li");
@@ -44,7 +73,7 @@ function renderZapretView(s) {
       li.addEventListener("click", () => { if (!(S && S.pick && S.pick.running)) guarded(() => api().SetStrategy(n)); });
       ul.appendChild(li);
     }
-    ul.dataset.list = sig;
+    ul.dataset.list = ssig;
   }
   for (const li of ul.children) li.classList.toggle("sel", li.dataset.name === z.strategy);
 
@@ -53,7 +82,7 @@ function renderZapretView(s) {
   for (const b of $("ipset").children) b.classList.toggle("sel", b.dataset.v === (z.ipset || ""));
   $("ipsetDate").textContent = z.ipsetUpdated
     ? t("обновлён {x}", new Date(z.ipsetUpdated).toLocaleDateString(LANG === "en" ? "en-GB" : "ru-RU", { day: "numeric", month: "long" }))
-    : t("сейчас — список из zapret");
+    : t("сейчас - список из zapret");
   $("hostsBlock").checked = !!s.config.hostsBlock;
   $("autoUpdate").checked = !!s.config.autoUpdate;
   let ver = z.version || t("не установлен");

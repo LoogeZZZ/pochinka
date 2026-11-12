@@ -29,6 +29,8 @@ sep() { printf '\n\n============================================================
   cat third_party/runetfreedom-geo-GPL-3.0.txt
   sep "Twemoji Country Flags (talkjs/country-flag-emoji-polyfill) — шрифт флагов — MIT (код) / CC-BY-4.0 (графика Twemoji)"
   cat third_party/twemoji-country-flags-LICENSE.md
+  sep "WireGuard for Windows — код фильтров WFP (internal/killswitch), адаптирован — MIT"
+  cat third_party/wireguard-firewall-LICENSE.txt
 
   go list -deps -f '{{with .Module}}{{if not .Main}}{{.Path}} {{.Version}}{{end}}{{end}}' . | sort -u |
   while read -r mod ver; do

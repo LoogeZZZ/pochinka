@@ -10,7 +10,7 @@ function renderSettings(s) {
   $("sdnsHint").className = "hint" + (sd.error ? " err" : "");
   $("sdnsHint").textContent = sd.error ? sd.error
     : t(sd.doh
-      ? "DNS-запросы шифруются (DoH) — провайдер не сможет подменить адрес сайта. Прежние настройки сетевых карт вернутся при выключении."
+      ? "DNS-запросы шифруются (DoH) - провайдер не сможет подменить адрес сайта. Прежние настройки сетевых карт вернутся при выключении."
       : "В этой версии Windows шифрование DNS недоступно: будут только серверы выбранного сервиса. Прежние настройки вернутся при выключении.");
   CUSTOM = s.config.customTheme || null;
   applyTheme(s.config.theme || "system");
@@ -18,6 +18,7 @@ function renderSettings(s) {
   if (lang !== LANG) setLang(lang, false);
   for (const b of $("lang").children) b.classList.toggle("sel", b.dataset.v === LANG);
   $("autostart").checked = !!s.autostart;
+  $("notify").checked = s.config.notify !== false;
   $("appVer").textContent = "Починка " + (s.version || "");
 }
 
@@ -50,7 +51,7 @@ function renderPickList(pk, current) {
   for (const li of ul.children) li.classList.toggle("sel", li.dataset.name === current);
 }
 
-// Тема: system/light/dark — из style.css; готовые и своя — палитры (themes.js).
+// Тема: system/light/dark - из style.css; готовые и своя - палитры (themes.js).
 let CUSTOM = null; // своя палитра из настроек
 
 function applyTheme(th) {
@@ -153,13 +154,13 @@ function renderThemeEditor() {
     inp.value = draft[inp.dataset.k];
     inp.parentElement.querySelector("code").textContent = draft[inp.dataset.k];
   }
-  // Превью — в цветах черновика, не трогая само окно.
+  // Превью - в цветах черновика, не трогая само окно.
   const pv = $("themePreview"), vars = themeVars(draft);
   for (const k in vars) pv.style.setProperty(k, vars[k]);
 }
 
 
-// setLang переключает язык: разметка переводится сразу, остальное —
+// setLang переключает язык: разметка переводится сразу, остальное -
 // повторной отрисовкой из последнего состояния.
 function setLang(lang, save) {
   LANG = lang === "en" ? "en" : "ru";
@@ -174,7 +175,7 @@ function setLang(lang, save) {
 }
 
 // Список игровых групп с тумблером у каждой. Строим один раз, дальше
-// только обновляем галочки — иначе переключатель дёргается под курсором.
+// только обновляем галочки - иначе переключатель дёргается под курсором.
 function renderGames(games, disabled, enabled) {
   const box = $("games");
   const sig = games.map((g) => g.id).join("|");

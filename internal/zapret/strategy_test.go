@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// ZAPRET_TEST_DIR — путь к распакованному релизу zapret-discord-youtube.
+// ZAPRET_TEST_DIR - путь к распакованному релизу zapret-discord-youtube.
 func TestParseAllStrategies(t *testing.T) {
 	dir := os.Getenv("ZAPRET_TEST_DIR")
 	if dir == "" {
@@ -63,7 +63,7 @@ func TestUnzipRejectsTraversal(t *testing.T) {
 	if err := unzipStrip(zp, dst); err != nil {
 		t.Fatal(err)
 	}
-	// Внутри out\ «сплющенный» путь допустим; главное — ничего снаружи.
+	// Внутри out\ «сплющенный» путь допустим; главное - ничего снаружи.
 	for _, bad := range []string{"evil1.txt", "evil2.txt", "evil3.txt"} {
 		for _, outside := range []string{filepath.Join(dir, bad), filepath.Join(filepath.Dir(dir), bad), filepath.Join(`C:\`, bad)} {
 			if _, err := os.Stat(outside); err == nil {

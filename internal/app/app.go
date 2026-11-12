@@ -8,13 +8,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
 	"pochinka/internal/health"
+	"pochinka/internal/hotkey"
 	"pochinka/internal/install"
+	"pochinka/internal/notify"
 	"pochinka/internal/paths"
 	"pochinka/internal/tgproxy"
 	"pochinka/internal/userlists"
@@ -23,15 +26,16 @@ import (
 	"pochinka/internal/zapret"
 )
 
-// App — всё, что видит окно. Публичные методы вызываются из JS
+// App - всё, что видит окно. Публичные методы вызываются из JS
 // (window.go.app.App.*), изменения прилетают в окно событием "state".
 type App struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	zapret *zapret.Manager
-	vpn    *vpn.Manager
-	tray   *tray
-	tg     *telegram
+	ctx     context.Context
+	cancel  context.CancelFunc
+	zapret  *zapret.Manager
+	vpn     *vpn.Manager
+	tray    *tray
+	tg      *telegram
+	hotkeys *hotkey.Manager
 
 	mu         sync.Mutex
 	checks     map[string]health.Result
@@ -45,14 +49,17 @@ type App struct {
 	sdnsErr    string             // ошибка защищённого DNS
 	onCancel   context.CancelFunc // отмена идущего включения обхода/VPN
 
+	// notif - статусы, о которых уже уведомляли (переходы запуск ⇄ останов).
+	notifZ, notifV, notifTG string
+
 	modeMu sync.Mutex // переключение режимов обход ⇄ VPN
 
 	emitMu      sync.Mutex
 	emitPending bool
 }
 
-// Version — версия программы (совпадает с productVersion в wails.json).
-const Version = "1.1.2"
+// Version - версия программы (совпадает с productVersion в wails.json).
+const Version = "1.2.0"
 
 type UIState struct {
 	Zapret    zapret.State             `json:"zapret"`
@@ -82,7 +89,7 @@ func (a *App) Startup(ctx context.Context) {
 			runtime.EventsEmit(a.ctx, "log", line)
 		}
 	})
-	// Есть ли задача автозапуска (schtasks — ~100 мс, не держим старт).
+	// Есть ли задача автозапуска (schtasks - ~100 мс, не держим старт).
 	go func() {
 		on := install.AutostartEnabled()
 		a.mu.Lock()
@@ -90,13 +97,13 @@ func (a *App) Startup(ctx context.Context) {
 		a.mu.Unlock()
 		a.emitState()
 	}()
-	// Модули поднимаются независимо: если один не смог — остальные работают.
+	// Модули поднимаются независимо: если один не смог - остальные работают.
 	a.tg = &telegram{}
 	if z, err := zapret.NewManager(a.onZapretChange); err != nil {
 		applog.Printf("не удалось инициализировать zapret: %v", err)
 	} else {
 		a.zapret = z
-		// Домены Cloudflare-фолбэка Telegram — в обход zapret (их подсети режут).
+		// Домены Cloudflare-фолбэка Telegram - в обход zapret (их подсети режут).
 		z.SetExtraDomains(tgproxy.DefaultCFDomains())
 		go z.AutoUpdateLoop(a.ctx)
 	}
@@ -111,26 +118,63 @@ func (a *App) Startup(ctx context.Context) {
 		}
 	})
 	a.tray = startTray(a)
+	// Горячие клавиши: свои сочетания у главной кнопки, обхода и VPN.
+	a.hotkeys = hotkey.New()
+	for _, hk := range []struct {
+		name, combo string
+		cb          func()
+	}{
+		{"toggle", config.Load().HotkeyToggle, func() { a.Toggle() }},
+		{"zapret", config.Load().HotkeyZapret, func() { a.hotkeyZapret() }},
+		{"vpn", config.Load().HotkeyVPN, func() { a.hotkeyVPN() }},
+	} {
+		if hk.combo != "" {
+			if err := a.hotkeys.Set(hk.name, hk.combo, hk.cb); err != nil {
+				applog.Printf("горячая клавиша %s (%s): %v", hk.name, hk.combo, err)
+			}
+		}
+	}
 	go a.vpn.Loop(a.ctx)
 	go a.watchConflicts()
 	go a.watchAppUpdates()
 	go a.ensureSecureDNS()
 	go a.refreshHosts()
+	go a.healthLoop()
 
 	if !winutil.IsAdmin() {
-		applog.Printf("ВНИМАНИЕ: приложение запущено без прав администратора — zapret не сможет работать")
+		applog.Printf("ВНИМАНИЕ: приложение запущено без прав администратора - zapret не сможет работать")
 	}
 	go a.restoreModes()
 }
 
+// healthLoop - пока включён обход, раз в 20 минут проверяем, что Discord и
+// YouTube всё ещё открываются: провайдер может поменять поведение ТСПУ, и
+// рабочая стратегия перестанет работать. О регрессии RunChecks сам
+// предупредит уведомлением.
+func (a *App) healthLoop() {
+	t := time.NewTimer(20 * time.Minute)
+	defer t.Stop()
+	for {
+		select {
+		case <-a.ctx.Done():
+			return
+		case <-t.C:
+		}
+		if a.zapret != nil && a.zapret.State().Status == zapret.StatusRunning {
+			a.RunChecks()
+		}
+		t.Reset(20 * time.Minute)
+	}
+}
+
 // restoreModes включает то, что было включено при выходе. При автозапуске
 // сеть после входа в Windows часто ещё не поднялась (Wi‑Fi, VPN-адаптеры,
-// DNS), поэтому неудачная попытка повторяется — примерно 2 минуты. Если
+// DNS), поэтому неудачная попытка повторяется - примерно 2 минуты. Если
 // пользователь за это время сам что-то переключил, повторы прекращаются.
 func (a *App) restoreModes() {
 	cfg := config.Load()
 	// Включено может быть только что-то одно; если в конфиге осталось оба
-	// (старая версия) — приоритет у VPN.
+	// (старая версия) - приоритет у VPN.
 	want := ""
 	switch {
 	case cfg.VPNConnected:
@@ -168,7 +212,7 @@ func (a *App) restoreModes() {
 			return
 		}
 		if i < len(delays)-1 {
-			applog.Printf("восстановление: не вышло (%s) — повторю через %v", msg, delays[i+1])
+			applog.Printf("восстановление: не вышло (%s) - повторю через %v", msg, delays[i+1])
 		}
 	}
 }
@@ -197,15 +241,15 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 }
 
 // shutdown: что было включено, уже записано в конфиг в момент переключения
-// (SetVPN/SetZapret/SetTelegram) — при следующем запуске восстановится.
+// (SetVPN/SetZapret/SetTelegram) - при следующем запуске восстановится.
 // Здесь только аккуратно гасим всё в правильном порядке.
 func (a *App) Shutdown(ctx context.Context) {
-	// 1. Отменить всё, что идёт (подбор сервера, загрузки, проверки) —
+	// 1. Отменить всё, что идёт (подбор сервера, загрузки, проверки) -
 	//    иначе выход ждал бы их десятки секунд.
 	if a.cancel != nil {
 		a.cancel()
 	}
-	// 2. VPN — первым и навсегда: убрать системный прокси/TUN; после Close
+	// 2. VPN - первым и навсегда: убрать системный прокси/TUN; после Close
 	//    никакой отложенный вызов (трей, проверка сервера) его не поднимет.
 	if a.vpn != nil {
 		a.vpn.Close()
@@ -218,6 +262,9 @@ func (a *App) Shutdown(ctx context.Context) {
 	}
 	if a.tray != nil {
 		a.tray.stop()
+	}
+	if a.hotkeys != nil {
+		a.hotkeys.Close()
 	}
 	applog.Close()
 }
@@ -236,6 +283,7 @@ func (a *App) emitState() {
 		a.emitPending = false
 		a.emitMu.Unlock()
 		st := a.GetState()
+		a.maybeNotify(st)
 		if a.ctx != nil {
 			runtime.EventsEmit(a.ctx, "state", st)
 		}
@@ -284,9 +332,134 @@ func (a *App) GetState() UIState {
 
 func (a *App) GetLog() []string { return applog.Tail() }
 
+// maybeNotify показывает уведомления о сменах состояния: включилось,
+// выключилось, упало с ошибкой. По одному на переход - emitState вызывается
+// часто, а уведомление о «подключено» должно прозвучать один раз.
+func (a *App) maybeNotify(st UIState) {
+	a.mu.Lock()
+	quitting := a.quitting
+	z, v, tg := a.notifZ, a.notifV, a.notifTG
+	a.notifZ, a.notifV, a.notifTG = string(st.Zapret.Status), string(st.VPN.Status), tgon(st.TG)
+	a.mu.Unlock()
+	if quitting {
+		return
+	}
+	if zs := string(st.Zapret.Status); zs != z {
+		switch zs {
+		case string(zapret.StatusRunning):
+			notify.Show(notify.Text("Обход включён", "Unblocking is on"),
+				notify.Text("Стратегия: "+st.Zapret.Strategy, "Strategy: "+st.Zapret.Strategy))
+		case string(zapret.StatusStopped):
+			if z == string(zapret.StatusRunning) {
+				notify.Show(notify.Text("Обход выключен", "Unblocking is off"), "")
+			}
+		case string(zapret.StatusError):
+			notify.Show(notify.Text("Обход: ошибка", "Unblocking: error"), st.Zapret.Error)
+		}
+	}
+	if vs := string(st.VPN.Status); vs != v {
+		switch vs {
+		case string(vpn.StatusRunning):
+			notify.Show(notify.Text("VPN подключён", "VPN connected"), st.VPN.Active)
+		case string(vpn.StatusStopped):
+			if v == string(vpn.StatusRunning) {
+				notify.Show(notify.Text("VPN отключён", "VPN disconnected"), "")
+			}
+		case string(vpn.StatusError):
+			notify.Show(notify.Text("VPN: ошибка", "VPN: error"), st.VPN.Error)
+		}
+	}
+	if ts := tgon(st.TG); ts != tg {
+		switch {
+		case st.TG.Running:
+			notify.Show(notify.Text("Прокси Telegram включён", "Telegram proxy is on"), "")
+		case !st.TG.Running && tg == "on":
+			notify.Show(notify.Text("Прокси Telegram выключен", "Telegram proxy is off"), "")
+		}
+	}
+}
+
+// tgon - строковый статус прокси Telegram для сравнения переходов.
+func tgon(t TGState) string {
+	if t.Running {
+		return "on"
+	}
+	return "off"
+}
+
+// SetNotify - тумблер «Показывать уведомления» в настройках.
+func (a *App) SetNotify(on bool) {
+	_, _ = config.Update(func(c *config.Config) { c.Notify = on })
+	a.emitState()
+}
+
+// hotkeyZapret / hotkeyVPN - клавиши «включить/выключить» конкретного
+// режима. Ошибку (нет подписки, не скачался zapret) показываем уведомлением.
+func (a *App) hotkeyZapret() {
+	if a.zapret == nil {
+		return
+	}
+	if msg := a.SetZapret(a.zapret.State().Status != zapret.StatusRunning); msg != "" {
+		notify.Show(notify.Text("Обход", "Unblocking"), msg)
+	}
+}
+
+func (a *App) hotkeyVPN() {
+	if a.vpn == nil {
+		return
+	}
+	if msg := a.SetVPN(a.vpn.State().Status != vpn.StatusRunning); msg != "" {
+		notify.Show("VPN", msg)
+	}
+}
+
+// SetHotkey - редактор горячих клавиш: name - "toggle" | "zapret" | "vpn",
+// combo - сочетание вида "Ctrl+Alt+P" или пустая строка (снять клавишу).
+// Возвращает ошибку, если сочетание невалидно или занято другой программой.
+func (a *App) SetHotkey(name, combo string) string {
+	combo = strings.TrimSpace(combo)
+	var cb func()
+	switch name {
+	case "toggle":
+		cb = func() { a.Toggle() }
+	case "zapret":
+		cb = a.hotkeyZapret
+	case "vpn":
+		cb = a.hotkeyVPN
+	default:
+		return "неизвестная клавиша"
+	}
+	if a.hotkeys == nil {
+		return "горячие клавиши недоступны"
+	}
+	if err := a.hotkeys.Set(name, combo, cb); err != nil {
+		return err.Error()
+	}
+	_, _ = config.Update(func(c *config.Config) {
+		switch name {
+		case "toggle":
+			c.HotkeyToggle = combo
+		case "zapret":
+			c.HotkeyZapret = combo
+		case "vpn":
+			c.HotkeyVPN = combo
+		}
+	})
+	applog.Printf("горячая клавиша %s: %s", name, firstNonEmptyStr(combo, "снята"))
+	a.emitState()
+	return ""
+}
+
+func firstNonEmptyStr(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
+}
+
 // ---- главная кнопка ----
 
-// anyOn — включено ли хоть что-то (или включается).
+// anyOn - включено ли хоть что-то (или включается).
 func (a *App) anyOn() bool {
 	if a.zapret != nil {
 		switch a.zapret.State().Status {
@@ -303,12 +476,12 @@ func (a *App) anyOn() bool {
 	return false
 }
 
-// Переключение режимов (обход ⇄ VPN) идёт под одной блокировкой modeMu —
+// Переключение режимов (обход ⇄ VPN) идёт под одной блокировкой modeMu -
 // окно, трей и восстановление при запуске могут нажимать одновременно, а
 // включёнными обход и VPN не должны оказаться никогда.
 //
 // Включение держит modeMu всё время запуска. Выключение сначала отменяет
-// идущее включение (cancelOn — без блокировки, мгновенно), потом берёт
+// идущее включение (cancelOn - без блокировки, мгновенно), потом берёт
 // modeMu: так «Выключить» не ждёт десятки секунд подбора сервера.
 
 func (a *App) beginOn() (context.Context, func()) {
@@ -340,7 +513,7 @@ func (a *App) cancelOn() {
 	}
 }
 
-// Toggle — главная кнопка: всё включить или всё выключить.
+// Toggle - главная кнопка: всё включить или всё выключить.
 func (a *App) Toggle() string {
 	if a.anyOn() {
 		a.cancelOn()
@@ -350,7 +523,7 @@ func (a *App) Toggle() string {
 		a.zapretOff()
 		return ""
 	}
-	// Включаем то, чем пользовались последним; если ещё ничем — VPN, когда
+	// Включаем то, чем пользовались последним; если ещё ничем - VPN, когда
 	// есть подписка, иначе обход.
 	last := config.Load().LastMode
 	hasSub := a.vpn != nil && a.vpn.State().HasSub
@@ -367,7 +540,7 @@ func (a *App) Toggle() string {
 // Включение обхода выключает VPN: вместе они мешают друг другу.
 func (a *App) SetZapret(on bool) string {
 	if a.zapret == nil {
-		return "Обход недоступен — см. журнал"
+		return "Обход недоступен - см. журнал"
 	}
 	if !on {
 		a.cancelOn()
@@ -397,7 +570,7 @@ func (a *App) SetZapret(on bool) string {
 // SetVPN включает/выключает VPN. Включение VPN выключает обход.
 func (a *App) SetVPN(on bool) string {
 	if a.vpn == nil {
-		return "VPN недоступен — см. журнал"
+		return "VPN недоступен - см. журнал"
 	}
 	if !on {
 		a.cancelOn()
@@ -419,7 +592,7 @@ func (a *App) SetVPN(on bool) string {
 	return ""
 }
 
-// zapretOff / vpnOff — под modeMu.
+// zapretOff / vpnOff - под modeMu.
 func (a *App) zapretOff() {
 	_, _ = config.Update(func(c *config.Config) { c.Connected = false })
 	if a.zapret != nil && a.zapret.State().Status != zapret.StatusStopped {
@@ -442,7 +615,7 @@ func (a *App) vpnOff() {
 
 func (a *App) SetStrategy(name string) string {
 	if a.zapret == nil {
-		return "Обход недоступен — см. журнал"
+		return "Обход недоступен - см. журнал"
 	}
 	if err := a.zapret.SetStrategy(a.ctx, name); err != nil {
 		return err.Error()
@@ -455,7 +628,7 @@ func (a *App) SetStrategy(name string) string {
 
 func (a *App) SetGameFilter(mode string) string {
 	if a.zapret == nil {
-		return "Обход недоступен — см. журнал"
+		return "Обход недоступен - см. журнал"
 	}
 	if err := a.zapret.SetGameFilter(a.ctx, mode); err != nil {
 		return err.Error()
@@ -463,10 +636,10 @@ func (a *App) SetGameFilter(mode string) string {
 	return ""
 }
 
-// SetIPSetMode — фильтр по IP: "" (по списку) | none | any.
+// SetIPSetMode - фильтр по IP: "" (по списку) | none | any.
 func (a *App) SetIPSetMode(mode string) string {
 	if a.zapret == nil {
-		return "Обход недоступен — см. журнал"
+		return "Обход недоступен - см. журнал"
 	}
 	if err := a.zapret.SetIPSetMode(a.ctx, mode); err != nil {
 		return err.Error()
@@ -474,16 +647,16 @@ func (a *App) SetIPSetMode(mode string) string {
 	return ""
 }
 
-// IPSetResult — ответ кнопки «Обновить список адресов».
+// IPSetResult - ответ кнопки «Обновить список адресов».
 type IPSetResult struct {
 	Count int    `json:"count"`
 	Error string `json:"error"`
 }
 
-// UpdateIPSet — кнопка «Обновить список адресов».
+// UpdateIPSet - кнопка «Обновить список адресов».
 func (a *App) UpdateIPSet() IPSetResult {
 	if a.zapret == nil {
-		return IPSetResult{Error: "Обход недоступен — см. журнал"}
+		return IPSetResult{Error: "Обход недоступен - см. журнал"}
 	}
 	n, err := a.zapret.UpdateIPSet(a.ctx)
 	if err != nil {
@@ -495,7 +668,7 @@ func (a *App) UpdateIPSet() IPSetResult {
 
 func (a *App) SetGameEnabled(id string, on bool) string {
 	if a.zapret == nil {
-		return "Обход недоступен — см. журнал"
+		return "Обход недоступен - см. журнал"
 	}
 	if err := a.zapret.SetGameEnabled(a.ctx, id, on); err != nil {
 		return err.Error()
@@ -520,10 +693,10 @@ func (a *App) SetAutoUpdate(on bool) {
 	a.emitState()
 }
 
-// CheckUpdates — ручная проверка обновлений zapret.
+// CheckUpdates - ручная проверка обновлений zapret.
 func (a *App) CheckUpdates() string {
 	if a.zapret == nil {
-		return "Обход недоступен — см. журнал"
+		return "Обход недоступен - см. журнал"
 	}
 	ok, err := a.zapret.CheckUpdate(a.ctx)
 	switch {
@@ -551,24 +724,116 @@ func (a *App) RunChecks() {
 	a.emitState()
 
 	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
-	res := health.CheckAll(ctx)
+	res := health.CheckAll(ctx, checkSites())
 	cancel()
 
-	// Обход выключили, пока шла проверка — результат уже не про него.
+	// Обход выключили, пока шла проверка - результат уже не про него.
 	if a.zapret.State().Status != zapret.StatusRunning {
 		res = map[string]health.Result{}
 	}
 	a.mu.Lock()
+	prev := a.checks
 	a.checks, a.checking = res, false
 	a.mu.Unlock()
 	for k, r := range res {
 		if r.OK {
 			applog.Printf("проверка %s: открывается (%d мс)", k, r.Latency)
 		} else {
-			applog.Printf("проверка %s: НЕ открывается — %s", k, r.Detail)
+			applog.Printf("проверка %s: НЕ открывается - %s", k, r.Detail)
 		}
 	}
+	// Раньше оба открывались, теперь нет - стратегия «протухла» (провайдер
+	// поменял поведение ТСПУ). Подскажем, не дожидаясь, пока заметит сам.
+	if checksOK(prev) && !checksOK(res) {
+		notify.Show(notify.Text("Обход перестал работать", "Unblocking stopped working"),
+			notify.Text("Discord и YouTube не открываются - попробуйте другую стратегию или автоподбор.",
+				"Discord and YouTube won't open - try another strategy or auto-pick."))
+	}
 	a.emitState()
+}
+
+// checksOK - есть результаты и все сервисы открываются.
+func checksOK(checks map[string]health.Result) bool {
+	if len(checks) == 0 {
+		return false
+	}
+	for _, r := range checks {
+		if !r.OK {
+			return false
+		}
+	}
+	return true
+}
+
+// checkSites - свои сайты для проверки: только похожие на домен, до 5.
+func checkSites() []string {
+	var out []string
+	for _, d := range config.Load().CheckSites {
+		d = strings.TrimSpace(strings.TrimSuffix(strings.ToLower(d), "."))
+		if checkDomain(d) {
+			out = append(out, d)
+		}
+		if len(out) == 5 {
+			break
+		}
+	}
+	return out
+}
+
+// checkDomain - похоже ли на домен: буквы, цифры, точка, дефис,
+// подчёркивание; метки не могут начинаться или кончаться дефисом.
+func checkDomain(s string) bool {
+	if s == "" || len(s) > 253 || strings.Contains(s, "..") || !strings.Contains(s, ".") {
+		return false
+	}
+	for _, label := range strings.Split(s, ".") {
+		if label == "" || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+	}
+	for _, r := range s {
+		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+// SetCheckSites - свои сайты для проверки доступности. Возвращает ошибку
+// для невалидного ввода: окно покажет её и не применит список.
+func (a *App) SetCheckSites(sites []string) string {
+	var clean []string
+	seen := map[string]bool{}
+	for _, d := range sites {
+		d = strings.TrimSpace(strings.TrimSuffix(strings.ToLower(d), "."))
+		if d == "" {
+			continue
+		}
+		if !checkDomain(d) {
+			return "«" + clipErr(d) + "» - это не домен"
+		}
+		if !seen[d] {
+			seen[d] = true
+			clean = append(clean, d)
+		}
+	}
+	if len(clean) > 5 {
+		return "Не больше 5 своих сайтов"
+	}
+	_, _ = config.Update(func(c *config.Config) { c.CheckSites = clean })
+	applog.Printf("свои сайты для проверки: %v", clean)
+	a.emitState()
+	if a.zapret != nil && a.zapret.State().Status == zapret.StatusRunning {
+		go a.RunChecks()
+	}
+	return ""
+}
+
+func clipErr(s string) string {
+	if len(s) > 60 {
+		return s[:60] + "…"
+	}
+	return s
 }
 
 // ---- VPN ----
@@ -588,7 +853,7 @@ func (a *App) RefreshSubscription() string {
 	return ""
 }
 
-// SetSendHWID — отправлять ли HWID устройства панели. Подписку сразу
+// SetSendHWID - отправлять ли HWID устройства панели. Подписку сразу
 // перечитываем: после включения панель с лимитом устройств её отдаст.
 func (a *App) SetSendHWID(on bool) string {
 	_, _ = config.Update(func(c *config.Config) { c.VPNNoHWID = !on })
@@ -626,13 +891,13 @@ func (a *App) PingServers() { a.vpn.Ping(a.ctx) }
 
 // ---- свои списки (редактор в окне) ----
 
-// ListResult — ответ окну при сохранении списка.
+// ListResult - ответ окну при сохранении списка.
 type ListResult struct {
 	Error string `json:"error"`
 	Count int    `json:"count"` // сколько записей (без комментариев)
 }
 
-// GetUserList — текст списка: zapret-include, zapret-exclude,
+// GetUserList - текст списка: zapret-include, zapret-exclude,
 // zapret-ipexclude, vpn-sites.
 func (a *App) GetUserList(id string) string {
 	l, ok := userlists.Get(id)
@@ -668,7 +933,7 @@ func (a *App) SaveUserList(id, text string) ListResult {
 				applog.Printf("обход: не удалось применить списки: %v", err)
 			}
 		}
-		// Домены обхода идут в VPN напрямую — VPN тоже перечитывает.
+		// Домены обхода идут в VPN напрямую - VPN тоже перечитывает.
 		a.vpn.RestartIfRunning(a.ctx)
 	}()
 	return ListResult{Count: n}
@@ -676,13 +941,13 @@ func (a *App) SaveUserList(id, text string) ListResult {
 
 // ---- прочее ----
 
-// OpenLogsFolder — папка журналов (единственная, которую можно открыть с
-// правами пользователя: остальная папка данных — только для администраторов).
+// OpenLogsFolder - папка журналов (единственная, которую можно открыть с
+// правами пользователя: остальная папка данных - только для администраторов).
 func (a *App) OpenLogsFolder() {
 	_ = exec.Command("explorer.exe", paths.LogsDir()).Start()
 }
 
-// OpenURL — ссылки из подписки (поддержка, личный кабинет).
+// OpenURL - ссылки из подписки (поддержка, личный кабинет).
 func (a *App) OpenURL(u string) {
 	pu, err := neturl.Parse(strings.TrimSpace(u))
 	if err != nil || len(u) > 1024 {
@@ -700,7 +965,7 @@ func (a *App) OpenURL(u string) {
 //
 // Саму ссылку explorer.exe в аргументе понимает только для http(s):
 // «tg://proxy?…» он принимает за путь и открывает «Документы». Поэтому
-// ссылка кладётся в ярлык .url — его оболочка открывает обработчиком схемы.
+// ссылка кладётся в ярлык .url - его оболочка открывает обработчиком схемы.
 func openAsUser(link string) {
 	if strings.ContainsAny(link, "\r\n") {
 		return
@@ -720,11 +985,11 @@ func openAsUser(link string) {
 		return
 	}
 	_ = exec.Command("explorer.exe", f.Name()).Start()
-	// В ярлыке секрет прокси — убираем, когда оболочка его уже прочитала.
+	// В ярлыке секрет прокси - убираем, когда оболочка его уже прочитала.
 	time.AfterFunc(30*time.Second, func() { os.Remove(f.Name()) })
 }
 
-// Quit — полный выход (из трея или из окна).
+// Quit - полный выход (из трея или из окна).
 func (a *App) Quit() {
 	a.mu.Lock()
 	a.quitting = true
@@ -733,7 +998,7 @@ func (a *App) Quit() {
 }
 
 func (a *App) ShowWindow() {
-	// Второй запуск или клик в трее до окончания старта — окна ещё нет.
+	// Второй запуск или клик в трее до окончания старта - окна ещё нет.
 	if a.ctx == nil {
 		return
 	}
@@ -754,10 +1019,10 @@ func (a *App) watchConflicts() {
 		changed := name != a.conflict
 		a.conflict = name
 		a.mu.Unlock()
-		// Счётчики Telegram-прокси меняются постоянно — обновляем окно.
+		// Счётчики Telegram-прокси меняются постоянно - обновляем окно.
 		if changed || (a.tg != nil && a.tg.state().Running) {
 			if changed && name != "" {
-				applog.Printf("ВНИМАНИЕ: работает другой VPN (%s) — он перехватывает трафик, выключите его", name)
+				applog.Printf("ВНИМАНИЕ: работает другой VPN (%s) - он перехватывает трафик, выключите его", name)
 			}
 			a.emitState()
 		}
@@ -769,13 +1034,23 @@ func (a *App) watchConflicts() {
 	}
 }
 
-// CheckVPN — повторить самопроверку VPN.
+// CheckVPN - повторить самопроверку VPN.
 func (a *App) CheckVPN() { a.vpn.SelfCheck(a.ctx) }
 
-// SetVPNRoute: "all" — всё, кроме российского; иначе только заблокированное.
+// SetVPNRoute: "all" - всё, кроме российского; иначе только заблокированное.
 func (a *App) SetVPNRoute(route string) string {
 	if err := a.vpn.SetRouteAll(a.ctx, route == "all"); err != nil {
 		return err.Error()
 	}
 	return ""
+}
+
+// SetKillSwitch - тумблер «Kill Switch» на экране VPN. Применяется сразу:
+// включённый VPN получает/снимает фильтры без перезапуска.
+func (a *App) SetKillSwitch(on bool) {
+	_, _ = config.Update(func(c *config.Config) { c.KillSwitch = on })
+	a.emitState()
+	if a.vpn != nil {
+		a.vpn.ApplyKillSwitch()
+	}
 }

@@ -23,7 +23,7 @@ func TestParseUserRules(t *testing.T) {
 }
 
 // Свои правила важнее встроенных: «напрямую» перебивает базу блокировок,
-// «через VPN» — правило «Госуслуги всегда напрямую».
+// «через VPN» - правило «Госуслуги всегда напрямую».
 func TestUserRulesRouting(t *testing.T) {
 	geo := os.Getenv("GEO_TEST_DIR")
 	if geo == "" {
@@ -55,11 +55,11 @@ func TestUserRulesRouting(t *testing.T) {
 		t.Error("gosuslugi.ru в «через VPN», а ушёл напрямую")
 	}
 	if strings.Contains(log, "example.com:443") {
-		t.Error("example.com ни в каком списке — должен идти напрямую")
+		t.Error("example.com ни в каком списке - должен идти напрямую")
 	}
 }
 
-// Программа ловится по процессу (здесь — сам тестовый процесс).
+// Программа ловится по процессу (здесь - сам тестовый процесс).
 func TestUserRulesProcess(t *testing.T) {
 	geo := os.Getenv("GEO_TEST_DIR")
 	if geo == "" {
@@ -105,7 +105,7 @@ func TestPatternRule(t *testing.T) {
 		`/yandex\.(ru|com)$/`:  `regexp:yandex\.(ru|com)$`,
 		"keyword:Yandex":       "keyword:yandex",
 		"*.yandex.ru":          "", // обычный домен, не шаблон
-		"regexp:(":             "", // неверный — пропуск
+		"regexp:(":             "", // неверный - пропуск
 		"keyword:":             "",
 		"a b*.com":             "",
 	}

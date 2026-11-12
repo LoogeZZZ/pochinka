@@ -9,32 +9,32 @@ import (
 )
 
 type Config struct {
-	// Strategy — имя .bat-файла стратегии без расширения, например "general (ALT2)".
+	// Strategy - имя .bat-файла стратегии без расширения, например "general (ALT2)".
 	Strategy string `json:"strategy"`
-	// ZapretVersion — какая распакованная версия zapret сейчас активна.
+	// ZapretVersion - какая распакованная версия zapret сейчас активна.
 	ZapretVersion string `json:"zapretVersion"`
-	// GameFilter: disabled | all | tcp | udp — как game_filter в service.bat.
+	// GameFilter: disabled | all | tcp | udp - как game_filter в service.bat.
 	GameFilter string `json:"gameFilter"`
-	// IPSetMode — фильтр по IP: "" (по списку) | none | any, см. zapret/ipset.go.
+	// IPSetMode - фильтр по IP: "" (по списку) | none | any, см. zapret/ipset.go.
 	IPSetMode string `json:"ipsetMode,omitempty"`
-	// HostsBlock — записи hosts для Discord и Telegram из zapret-discord-youtube.
+	// HostsBlock - записи hosts для Discord и Telegram из zapret-discord-youtube.
 	HostsBlock bool `json:"hostsBlock,omitempty"`
-	// AutoUpdate — проверять и ставить обновления zapret в фоне.
+	// AutoUpdate - проверять и ставить обновления zapret в фоне.
 	AutoUpdate bool `json:"autoUpdate"`
-	// DisabledGames — ID игровых групп, которые пользователь выключил.
+	// DisabledGames - ID игровых групп, которые пользователь выключил.
 	// Хранятся выключенные, а не включённые: новые группы из обновлений
 	// приложения включаются сами.
 	DisabledGames []string `json:"disabledGames"`
-	// EnabledGames — ID групп, выключенных по умолчанию, которые включил пользователь.
+	// EnabledGames - ID групп, выключенных по умолчанию, которые включил пользователь.
 	EnabledGames []string `json:"enabledGames"`
 	// VPN
-	VPNActiveSub string `json:"vpnActiveSub"` // ID активной подписки (сами подписки — в vpn-subs\)
+	VPNActiveSub string `json:"vpnActiveSub"` // ID активной подписки (сами подписки - в vpn-subs\)
 	// Устарело: одиночная подписка до версии с мульти-подписками, переносится автоматически.
 	VPNSubURL   string `json:"vpnSubUrl,omitempty"`
 	VPNSelected string `json:"vpnSelected,omitempty"`
 	VPNMode     string `json:"vpnMode"`     // proxy | tun
 	VPNRouteAll bool   `json:"vpnRouteAll"` // через VPN всё, кроме российского
-	// VPNNoHWID — не отправлять HWID устройства при загрузке подписки (по
+	// VPNNoHWID - не отправлять HWID устройства при загрузке подписки (по
 	// умолчанию отправляем: панели с лимитом устройств без него отдают 404).
 	VPNNoHWID    bool `json:"vpnNoHwid,omitempty"`
 	VPNHTTPPort  int  `json:"vpnHttpPort"`
@@ -46,21 +46,41 @@ type Config struct {
 	TGSecret  string `json:"tgSecret"`
 	TGPort    int    `json:"tgPort"`
 
-	// Theme — тема окна: system | light | dark.
+	// Theme - тема окна: system | light | dark.
 	Theme string `json:"theme"`
-	// CustomTheme — своя палитра (scheme + 8 цветов #rrggbb), см. themes.go.
+	// CustomTheme - своя палитра (scheme + 8 цветов #rrggbb), см. themes.go.
 	CustomTheme map[string]string `json:"customTheme,omitempty"`
-	// SecureDNS — защищённый DNS на сетевых картах: "" | google | cloudflare | quad9.
+	// SecureDNS - защищённый DNS на сетевых картах: "" | google | cloudflare | quad9.
 	SecureDNS string `json:"secureDns,omitempty"`
 
-	// Lang — язык интерфейса: ru | en (пусто — русский).
+	// Lang - язык интерфейса: ru | en (пусто - русский).
 	Lang string `json:"lang"`
 
-	// LastMode — чем пользовались последним: "zapret" или "vpn" (они
+	// Notify - показывать уведомления Windows (подключение, отключение,
+	// ошибки, обновления). По умолчанию включено.
+	Notify bool `json:"notify"`
+
+	// KillSwitch - пока VPN включён, блокировать весь исходящий трафик,
+	// кроме самого VPN: при обрыве соединения ничего не утечёт напрямую.
+	KillSwitch bool `json:"killSwitch"`
+
+	// Hotkey* - горячие клавиши вида "Ctrl+Alt+P", пусто - выключено.
+	HotkeyToggle string `json:"hotkeyToggle,omitempty"` // главная кнопка (последний режим)
+	HotkeyZapret string `json:"hotkeyZapret,omitempty"` // обход блокировок
+	HotkeyVPN    string `json:"hotkeyVpn,omitempty"`    // VPN
+
+	// Hotkey - устарело: единственная клавиша до редактора горячих клавиш,
+	// переносится в HotkeyToggle.
+	Hotkey bool `json:"hotkey,omitempty"`
+
+	// CheckSites - свои сайты для проверки доступности (домены, до 5).
+	CheckSites []string `json:"checkSites,omitempty"`
+
+	// LastMode - чем пользовались последним: "zapret" или "vpn" (они
 	// взаимоисключающие, главная кнопка включает последний).
 	LastMode string `json:"lastMode"`
 
-	// Connected — было ли включено при выходе; при запуске восстанавливаем.
+	// Connected - было ли включено при выходе; при запуске восстанавливаем.
 	Connected bool `json:"connected"`
 }
 
@@ -69,12 +89,13 @@ func defaults() Config {
 		Strategy:   "general",
 		GameFilter: "disabled",
 		AutoUpdate: true,
+		Notify:     true,
 	}
 }
 
 var mu sync.Mutex
 
-// LastError — последняя ошибка записи конфига (диск полон, нет прав…), для окна.
+// LastError - последняя ошибка записи конфига (диск полон, нет прав…), для окна.
 var LastError error
 
 func Load() Config {
@@ -94,6 +115,12 @@ func loadLocked() Config {
 	}
 	if c.GameFilter == "" {
 		c.GameFilter = "disabled"
+	}
+	// Старый конфиг с одной общей клавишей → новая схема с тремя.
+	if c.Hotkey && c.HotkeyToggle == "" {
+		c.HotkeyToggle = "Ctrl+Alt+P"
+		c.Hotkey = false
+		_ = saveLocked(c)
 	}
 	return c
 }
@@ -133,7 +160,7 @@ func saveLocked(c Config) error {
 	return nil
 }
 
-// Update загружает конфиг, применяет fn и сохраняет — под одной блокировкой,
+// Update загружает конфиг, применяет fn и сохраняет - под одной блокировкой,
 // чтобы одновременные изменения не затирали друг друга.
 func Update(fn func(c *Config)) (Config, error) {
 	mu.Lock()

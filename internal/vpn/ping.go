@@ -11,22 +11,22 @@ import (
 	"time"
 )
 
-// Пинг — это реальный запрос ЧЕРЕЗ сервер (как «реальная задержка» в
+// Пинг - это реальный запрос ЧЕРЕЗ сервер (как «реальная задержка» в
 // v2rayN), а не TCP-подключение к его порту: мёртвый сервер может принимать
 // TCP и при этом ничего не пропускать.
 // Не Google: серверы «белых списков» пропускают Google, но не остальной
 // интернет, и замер через gstatic принимал их за живые.
-// probeURL — переменная только ради тестов (локальная страница вместо
+// probeURL - переменная только ради тестов (локальная страница вместо
 // Cloudflare).
 var probeURL = "https://www.cloudflare.com/cdn-cgi/trace"
 
 // PingAll проверяет все серверы одним временным экземпляром xray: у каждого
-// сервера свой локальный порт. Результат — мс, -1 если сервер не пропускает
+// сервера свой локальный порт. Результат - мс, -1 если сервер не пропускает
 // трафик.
 func PingAll(ctx context.Context, servers []*Server) map[string]int { return pingAll(ctx, servers, "") }
 
-// pingAll: iface — через какую сетевую карту ходить (в режиме TUN, чтобы
-// замеры не шли через наш же туннель); пусто — как обычно.
+// pingAll: iface - через какую сетевую карту ходить (в режиме TUN, чтобы
+// замеры не шли через наш же туннель); пусто - как обычно.
 func pingAll(ctx context.Context, servers []*Server, iface string) map[string]int {
 	out := make(map[string]int, len(servers))
 	if len(servers) == 0 {
@@ -111,7 +111,7 @@ func buildProbeConfig(servers []*Server, ports []int, iface string) ([]byte, err
 	return rewireForProbe(cfg, ports)
 }
 
-// freePorts — свободные локальные порты от системы (не случайный диапазон:
+// freePorts - свободные локальные порты от системы (не случайный диапазон:
 // его могут занять Hyper-V/WSL/Docker).
 func freePorts(n int) ([]int, error) {
 	var lns []net.Listener
@@ -132,7 +132,7 @@ func freePorts(n int) ([]int, error) {
 	return ports, nil
 }
 
-// portFree — порт можно занять на 127.0.0.1.
+// portFree - порт можно занять на 127.0.0.1.
 func portFree(port int) bool {
 	if port <= 0 || port > 65535 {
 		return false

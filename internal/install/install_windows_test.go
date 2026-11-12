@@ -16,7 +16,7 @@ func TestTaskXMLWellFormed(t *testing.T) {
 			Exec struct{ Command, Arguments string }
 		}
 	}
-	// encoding="UTF-16" в заголовке — сам текст тут в UTF-8, парсим без него.
+	// encoding="UTF-16" в заголовке - сам текст тут в UTF-8, парсим без него.
 	if err := xml.Unmarshal([]byte(strings.Replace(x, `encoding="UTF-16"`, "", 1)), &v); err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestTaskXMLWellFormed(t *testing.T) {
 	}
 }
 
-// Живая регистрация в Планировщике (без админа — с пониженным уровнем).
+// Живая регистрация в Планировщике (без админа - с пониженным уровнем).
 func TestTaskRegisterLive(t *testing.T) {
 	if os.Getenv("LIVE_TASK") == "" {
 		t.Skip("LIVE_TASK=1")

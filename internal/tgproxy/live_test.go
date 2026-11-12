@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// LIVE_TG=1 — настоящий Telegram: через прокси шлём req_pq_multi (первый шаг
+// LIVE_TG=1 - настоящий Telegram: через прокси шлём req_pq_multi (первый шаг
 // авторизации MTProto, без ключей) и ждём resPQ с нашим nonce.
 func TestLiveTelegram(t *testing.T) {
 	if os.Getenv("LIVE_TG") == "" {
@@ -52,7 +52,7 @@ func TestLiveTelegram(t *testing.T) {
 	t.Logf("статистика: %+v", p.Stats())
 }
 
-// LIVE_TG=1 — путь через Cloudflare: WS-фронт и прямой TCP закрыты.
+// LIVE_TG=1 - путь через Cloudflare: WS-фронт и прямой TCP закрыты.
 func TestLiveTelegramViaCF(t *testing.T) {
 	if os.Getenv("LIVE_TG") == "" {
 		t.Skip("LIVE_TG не задан")

@@ -64,7 +64,7 @@ func TestWriteBlock(t *testing.T) {
 	}
 }
 
-// LIVE_HOSTS=1 — настоящий файл из репозитория разбирается (hosts не трогаем).
+// LIVE_HOSTS=1 - настоящий файл из репозитория разбирается (hosts не трогаем).
 func TestLiveParse(t *testing.T) {
 	if os.Getenv("LIVE_HOSTS") == "" {
 		t.Skip("LIVE_HOSTS=1")

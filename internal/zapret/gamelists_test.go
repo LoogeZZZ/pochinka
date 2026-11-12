@@ -43,7 +43,7 @@ func TestPatchReleaseExclude(t *testing.T) {
 	if strings.Contains(string(b), "riot") || !strings.Contains(string(b), "vk.com") {
 		t.Fatalf("после правки: %q", b)
 	}
-	// Группу выключили — исключения возвращаются из оригинала.
+	// Группу выключили - исключения возвращаются из оригинала.
 	if err := patchReleaseExclude(dir, nil); err != nil {
 		t.Fatal(err)
 	}

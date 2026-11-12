@@ -73,7 +73,7 @@ func TestNoLeakManySessions(t *testing.T) {
 			}(i)
 		}
 		wg.Wait()
-		// фейковый Telegram запоминает сессии — это память теста, не прокси
+		// фейковый Telegram запоминает сессии - это память теста, не прокси
 		tg.mu.Lock()
 		tg.sessions, tg.hosts = nil, nil
 		tg.mu.Unlock()

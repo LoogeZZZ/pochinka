@@ -1,4 +1,4 @@
-// Package hostsfile — записи hosts для Discord и Telegram из
+// Package hostsfile - записи hosts для Discord и Telegram из
 // zapret-discord-youtube («Update Hosts File» в service.bat). Оригинал
 // открывает Блокнот и просит скопировать строки руками; мы пишем их сами,
 // отдельным помеченным блоком, и только его же потом убираем.
@@ -27,7 +27,7 @@ const (
 	endMark   = "# <<< Pochinka"
 )
 
-// allowed — домены, которые разрешено прописывать. Файл приходит из сети, и
+// allowed - домены, которые разрешено прописывать. Файл приходит из сети, и
 // программа с правами администратора не должна дать подменить через него
 // адрес банка или Госуслуг: всё остальное отбрасывается.
 var allowed = []string{
@@ -45,7 +45,7 @@ func allowedHost(h string) bool {
 	return false
 }
 
-// Path — системный файл hosts.
+// Path - системный файл hosts.
 func Path() string {
 	dir, err := windows.GetSystemDirectory()
 	if err != nil {
@@ -54,7 +54,7 @@ func Path() string {
 	return filepath.Join(dir, "drivers", "etc", "hosts")
 }
 
-// Active — сколько записей сейчас в нашем блоке (0 — блока нет).
+// Active - сколько записей сейчас в нашем блоке (0 - блока нет).
 func Active() int {
 	b, err := os.ReadFile(Path())
 	if err != nil {
@@ -89,7 +89,7 @@ func Disable() error {
 func download(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	// Метка в адресе — чтобы не получить старую копию из кэша, как в service.bat.
+	// Метка в адресе - чтобы не получить старую копию из кэша, как в service.bat.
 	url := fmt.Sprintf("%s?t=%d", sourceURL, time.Now().Unix())
 	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	req.Header.Set("User-Agent", "Pochinka")
@@ -181,7 +181,7 @@ func split(text string) (rest string, block []string) {
 	return strings.TrimRight(strings.Join(keep, "\r\n"), "\r\n \t"), block
 }
 
-// write ставит блок с entries (nil — убирает блок). Строки, которые уже есть
+// write ставит блок с entries (nil - убирает блок). Строки, которые уже есть
 // в hosts вне блока (их могли скопировать руками), не дублируем.
 func write(entries []string) error { return writeTo(Path(), entries) }
 

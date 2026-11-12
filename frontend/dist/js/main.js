@@ -39,6 +39,23 @@ for (const b of document.querySelectorAll("[data-section]")) b.addEventListener(
 // Выключение не ждёт идущего включения: бэкенд сам отменит запуск. Иначе
 // флажок «занято» молча глотал бы клик «Выключить».
 const offOrGuarded = (on, fn) => (on ? guarded(fn) : fn());
+
+// ---- первый запуск ----
+let welcomeShown = false;
+function welcomeDone() {
+  try { localStorage.setItem("welcomed", "1"); } catch (e) {}
+  show("viewMain");
+}
+function maybeWelcome() {
+  if (!S) return false;
+  try { if (localStorage.getItem("welcomed") === "1") return false; } catch (e) {}
+  return !S.config.lastMode && !S.vpn.hasSub && !(S.tg && S.tg.running);
+}
+$("wcZapret").addEventListener("click", () => { welcomeDone(); api().SetZapret(true); });
+$("wcVpn").addEventListener("click", () => { welcomeDone(); addMode = true; openSection("viewVpn", "viewMain"); render(S); });
+$("wcTg").addEventListener("click", () => { welcomeDone(); openSection("viewTg", "viewMain"); });
+$("wcSkip").addEventListener("click", welcomeDone);
+
 $("toggle").addEventListener("click", () => {
   const st = $("toggle").dataset.status;
   offOrGuarded(st === "stopped" || st === "error", () => api().Toggle());
@@ -96,10 +113,16 @@ $("pingBtn").addEventListener("click", async () => {
   b.disabled = false;
   b.textContent = t("Проверить пинг");
 });
+$("srvSearch").addEventListener("input", (e) => { srvFilter = e.target.value; if (S) render(S); });
+$("srvSort").addEventListener("click", () => { srvSort = (srvSort + 1) % 3; if (S) render(S); });
 $("sendHwid").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetSendHWID(e.target.checked);
   if (r) notify(r);
 }));
+$("killSwitch").addEventListener("change", (e) => {
+  if (S) { S.config.killSwitch = e.target.checked; render(S); }
+  api().SetKillSwitch(e.target.checked);
+});
 $("updateBtn").addEventListener("click", () => api().InstallAppUpdate());
 $("updatePage").addEventListener("click", () => api().OpenAppUpdate());
 $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
@@ -108,10 +131,21 @@ $("vpnCheckBtn").addEventListener("click", () => api().CheckVPN());
 $("pickBtn").addEventListener("click", async () => {
   if (S && S.pick && S.pick.running) { api().StopPickStrategy(); return; }
   if (S && ["running", "starting"].includes(S.vpn.status) &&
-      !(await ask(t("Для подбора нужен обход — VPN будет выключен. Продолжить?"), { ok: t("Продолжить") }))) return;
+      !(await ask(t("Для подбора нужен обход - VPN будет выключен. Продолжить?"), { ok: t("Продолжить") }))) return;
   api().AutoPickStrategy();
 });
 $("recheck").addEventListener("click", () => api().RunChecks());
+$("checkSiteAdd").addEventListener("click", () => {
+  const inp = $("checkSiteInput");
+  const d = inp.value.trim();
+  if (!d) return;
+  const sites = ((S && S.config.checkSites) || []).concat([d]);
+  guarded(async () => {
+    const r = await api().SetCheckSites(sites);
+    if (r) return notify(r);
+    inp.value = "";
+  });
+});
 for (const b of $("gameFilter").children) b.addEventListener("click", () => guarded(() => api().SetGameFilter(b.dataset.v)));
 for (const b of $("ipset").children) b.addEventListener("click", () => guarded(async () => {
   const r = await api().SetIPSetMode(b.dataset.v);
@@ -166,6 +200,10 @@ $("autostart").addEventListener("change", (e) => guarded(async () => {
   const r = await api().SetAutostart(e.target.checked);
   if (r) { notify(r); if (S) render(S); }
 }));
+$("notify").addEventListener("change", (e) => {
+  if (S) { S.config.notify = e.target.checked; render(S); }
+  api().SetNotify(e.target.checked);
+});
 $("checkUpdate").addEventListener("click", () => guarded(async () => {
   const label = $("checkUpdateLabel");
   label.textContent = t("Проверяю…");
@@ -178,9 +216,31 @@ $("checkUpdate").addEventListener("click", () => guarded(async () => {
     api().InstallAppUpdate();
   }
 }));
+
+// резервная копия
+$("backupSave").addEventListener("click", () => guarded(async () => {
+  const path = await window.runtime.SaveFileDialog({
+    defaultFilename: "pochinka-backup-" + (S ? S.version : "") + ".zip",
+    filters: [{ displayName: "Zip-архив", pattern: "*.zip" }],
+  });
+  if (!path) return;
+  const r = await api().ExportBackup(path);
+  if (r && r.error) return notify(t("Не удалось сохранить: {x}", r.error));
+  $("backupSaveLabel").textContent = t("Сохранено");
+  setTimeout(() => { $("backupSaveLabel").textContent = ""; }, 2500);
+}));
+$("backupRestore").addEventListener("click", () => guarded(async () => {
+  const path = await window.runtime.OpenFileDialog({
+    filters: [{ displayName: "Zip-архив", pattern: "*.zip" }],
+  });
+  if (!path) return;
+  if (!(await ask(t("Восстановить настройки из этой копии? Текущие настройки, подписки и списки будут заменены, программа перезапустится."), { ok: t("Восстановить"), danger: true }))) return;
+  const r = await api().ImportBackup(path);
+  if (r && r.error) notify(r.error);
+}));
 $("licenses").addEventListener("click", () => api().OpenLicenses());
 $("uninstall").addEventListener("click", async () => {
-  if (!(await ask(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется — его можно удалить вручную."), { ok: t("Удалить"), danger: true }))) return;
+  if (!(await ask(t("Удалить Починку? Будут выключены обход, VPN и прокси для Telegram, возвращены настройки прокси Windows и удалены: копия программы, подписки, настройки и журналы. Скачанный вами exe останется - его можно удалить вручную."), { ok: t("Удалить"), danger: true }))) return;
   const r = await api().Uninstall();
   if (r) notify(r);
 });
@@ -208,7 +268,7 @@ function appendLog(line) {
   if (atBottom) pre.scrollTop = pre.scrollHeight;
 }
 
-translateStatic(); // язык из localStorage — до первого состояния, без мигания
+translateStatic(); // язык из localStorage - до первого состояния, без мигания
 window.addEventListener("DOMContentLoaded", async () => {
   window.runtime.EventsOn("state", render);
   window.runtime.EventsOn("log", appendLog);

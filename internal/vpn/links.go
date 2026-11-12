@@ -11,21 +11,21 @@ import (
 	"strings"
 )
 
-// Server — один сервер из подписки, уже в виде outbound для xray.
+// Server - один сервер из подписки, уже в виде outbound для xray.
 type Server struct {
 	ID       string         `json:"id"`   // стабильный ключ: протокол+адрес+порт+имя
 	Name     string         `json:"name"` // как в подписке, с флагом
 	Protocol string         `json:"protocol"`
 	Address  string         `json:"address"`
 	Port     int            `json:"port"`
-	UDP      bool           `json:"udp"` // транспорт поверх UDP (hysteria, kcp) — TCP-пинг не показателен
+	UDP      bool           `json:"udp"` // транспорт поверх UDP (hysteria, kcp) - TCP-пинг не показателен
 	Outbound map[string]any `json:"-"`   // outbound xray без tag
-	// Extra — вспомогательные outbound'ы, на которые ссылается основной
+	// Extra - вспомогательные outbound'ы, на которые ссылается основной
 	// (dialerProxy в JSON-подписках). Теги уже переименованы.
 	Extra []map[string]any `json:"-"`
 }
 
-// ParseLink разбирает одну ссылку вида vless://, vmess://, trojan://, ss://, hysteria2://.
+// ParseLink разбирает одну ссылку вида vless://, vmess://, trojan://, ss://, hysteria2://, wg://.
 func ParseLink(link string) (*Server, error) {
 	link = strings.TrimSpace(link)
 	scheme, _, ok := strings.Cut(link, "://")
@@ -43,6 +43,8 @@ func ParseLink(link string) (*Server, error) {
 		return parseSS(link)
 	case "hysteria2", "hy2":
 		return parseHysteria2(link)
+	case "wg", "wireguard":
+		return parseWireGuard(link)
 	}
 	return nil, fmt.Errorf("протокол %s не поддерживается", scheme)
 }
@@ -361,6 +363,120 @@ func decodeB64(s string) ([]byte, error) {
 		}
 	}
 	return nil, errors.New("не base64")
+}
+
+// parseWireGuard разбирает ссылку wg://BASE64(JSON) - формат, которым
+// делятся серверами v2rayN, Hiddify и другие клиенты. Поля:
+//
+//	{
+//	  "privateKey": "...",          // обязательный
+//	  "address": ["10.0.0.2/32"],   // строка или массив
+//	  "dns": "1.1.1.1",
+//	  "mtu": 1420,
+//	  "reserved": [0,0,0],          // для WARP-совместимых серверов
+//	  "peers": [{
+//	    "publicKey": "...",         // обязательный
+//	    "preSharedKey": "...",
+//	    "endpoint": "host:port",    // обязательный у peer'а
+//	    "keepAlive": 25,
+//	    "allowedIPs": ["0.0.0.0/0"]
+//	  }]
+//	}
+//
+// AmneziaWG-параметры (jc/jmin/jmax/s1/s2/h1..h4) ядро xray не умеет -
+// такие конфиги просто не пройдут проверку при добавлении.
+func parseWireGuard(link string) (*Server, error) {
+	body := strings.TrimPrefix(link, "wg://")
+	body = strings.TrimPrefix(body, "wireguard://")
+	name := ""
+	if i := strings.Index(body, "#"); i >= 0 {
+		name, _ = url.PathUnescape(body[i+1:])
+		body = body[:i]
+	}
+	b, err := decodeB64(body)
+	if err != nil {
+		return nil, errors.New("wireguard: не base64")
+	}
+	var w struct {
+		PrivateKey string `json:"privateKey"`
+		Address    any    `json:"address"` // строка "10.0.0.2/32" или массив
+		MTU        int    `json:"mtu"`
+		Reserved   []int  `json:"reserved"`
+		Peers      []struct {
+			PublicKey    string   `json:"publicKey"`
+			PreSharedKey string   `json:"preSharedKey"`
+			Endpoint     string   `json:"endpoint"`
+			KeepAlive    int      `json:"keepAlive"`
+			AllowedIPs   []string `json:"allowedIPs"`
+		} `json:"peers"`
+	}
+	if err := json.Unmarshal(b, &w); err != nil {
+		return nil, errors.New("wireguard: не JSON")
+	}
+	if w.PrivateKey == "" {
+		return nil, errors.New("wireguard: нет privateKey")
+	}
+	addrs := []string{}
+	switch a := w.Address.(type) {
+	case string:
+		addrs = []string{a}
+	case []any:
+		for _, v := range a {
+			if s, ok := v.(string); ok {
+				addrs = append(addrs, s)
+			}
+		}
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("wireguard: нет address")
+	}
+	var peers []any
+	host, port := "", 0
+	for _, p := range w.Peers {
+		h, prt, err := net.SplitHostPort(p.Endpoint)
+		if err != nil || p.PublicKey == "" {
+			continue // peer без адреса или ключа не подойдёт
+		}
+		n, _ := strconv.Atoi(prt)
+		if n <= 0 || n > 65535 {
+			continue
+		}
+		if host == "" {
+			host, port = h, n
+		}
+		peer := map[string]any{"publicKey": p.PublicKey, "endpoint": p.Endpoint}
+		if p.PreSharedKey != "" {
+			peer["preSharedKey"] = p.PreSharedKey
+		}
+		if p.KeepAlive > 0 {
+			peer["keepAlive"] = p.KeepAlive
+		}
+		if len(p.AllowedIPs) > 0 {
+			peer["allowedIPs"] = p.AllowedIPs
+		}
+		peers = append(peers, peer)
+	}
+	if host == "" || len(peers) == 0 {
+		return nil, errors.New("wireguard: нет рабочего peer'а (endpoint и publicKey)")
+	}
+	settings := map[string]any{
+		"secretKey": w.PrivateKey,
+		"address":   addrs,
+		"peers":     peers,
+	}
+	if w.MTU > 0 {
+		settings["mtu"] = w.MTU
+	}
+	if len(w.Reserved) == 3 {
+		settings["reserved"] = w.Reserved
+	}
+	return &Server{
+		Name: firstNonEmpty(name, host), Protocol: "wireguard", Address: host, Port: port, UDP: true,
+		Outbound: map[string]any{
+			"protocol": "wireguard",
+			"settings": settings,
+		},
+	}, nil
 }
 
 func firstNonEmpty(v ...string) string {

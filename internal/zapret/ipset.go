@@ -17,12 +17,12 @@ import (
 	"pochinka/internal/paths"
 )
 
-// Фильтр по IP — как «IPSet Filter» в service.bat. Стратегии обходят и по
+// Фильтр по IP - как «IPSet Filter» в service.bat. Стратегии обходят и по
 // списку доменов, и по списку адресов ipset-all.txt; режим решает, что в нём:
 //
-//	""     — список адресов (свежий, если обновляли, иначе из релиза);
-//	"none" — заглушка: по адресам ничего не обходится, только по доменам;
-//	"any"  — пустой файл: для winws это «любой адрес».
+//	""     - список адресов (свежий, если обновляли, иначе из релиза);
+//	"none" - заглушка: по адресам ничего не обходится, только по доменам;
+//	"any"  - пустой файл: для winws это «любой адрес».
 const (
 	IPSetList = ""
 	IPSetNone = "none"
@@ -30,10 +30,10 @@ const (
 )
 
 // Заглушка из service.bat: адрес из документационной сети, его нет в интернете.
-// Пустой список для winws значит «все адреса», поэтому «ничего» — это он.
+// Пустой список для winws значит «все адреса», поэтому «ничего» - это он.
 const ipsetPlaceholder = "203.0.113.113/32"
 
-// ipsetURL — тот же файл, что качает «Update IPSet List» в service.bat.
+// ipsetURL - тот же файл, что качает «Update IPSet List» в service.bat.
 const ipsetURL = "https://raw.githubusercontent.com/" + repo + "/refs/heads/main/.service/ipset-service.txt"
 
 // Свежий список храним рядом с настройками, а не в папке версии: иначе
@@ -42,7 +42,7 @@ func ipsetFile() string { return filepath.Join(paths.DataDir(), "ipset-all.txt")
 
 func ValidIPSetMode(m string) bool { return m == IPSetList || m == IPSetNone || m == IPSetAny }
 
-// IPSetUpdated — когда список адресов обновляли (нулевое время — ни разу).
+// IPSetUpdated - когда список адресов обновляли (нулевое время - ни разу).
 func IPSetUpdated() time.Time {
 	st, err := os.Stat(ipsetFile())
 	if err != nil {
@@ -104,7 +104,7 @@ func (m *Manager) UpdateIPSet(ctx context.Context) (int, error) {
 }
 
 // parseIPSet проверяет скачанный список: только адреса и подсети, по одному в
-// строке. Файл пришёл из сети — что-то другое winws не отдаём.
+// строке. Файл пришёл из сети - что-то другое winws не отдаём.
 func parseIPSet(text string) (string, int, error) {
 	var sb strings.Builder
 	n := 0
@@ -129,7 +129,7 @@ func parseIPSet(text string) (string, int, error) {
 }
 
 // prepareIPSet собирает ipset-all.txt версии под выбранный режим. Список из
-// релиза хранится рядом как .orig — к нему возвращаемся, если свежего нет.
+// релиза хранится рядом как .orig - к нему возвращаемся, если свежего нет.
 func prepareIPSet(listsDir, mode string) error {
 	cur := filepath.Join(listsDir, "ipset-all.txt")
 	orig := cur + ".orig"
@@ -160,7 +160,7 @@ func prepareIPSet(listsDir, mode string) error {
 	return os.WriteFile(cur, data, 0o644)
 }
 
-// hasEntries — есть ли в списке хоть одна запись, кроме комментариев.
+// hasEntries - есть ли в списке хоть одна запись, кроме комментариев.
 // Пустой список winws понимает как «всё»: пустые исключения отключили бы
 // обход целиком, поэтому в них кладём заглушку, как и service.bat.
 func hasEntries(text string) bool {

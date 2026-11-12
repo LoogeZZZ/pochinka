@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// Подпись утилитой signer проверяется вшитым ключом; подменённый файл — нет.
+// Подпись утилитой signer проверяется вшитым ключом; подменённый файл - нет.
 func TestVerify(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "x.exe")
@@ -36,7 +36,7 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-// LIVE_UPDATE=1 — настоящий GitHub: проверка версии, скачивание и подпись.
+// LIVE_UPDATE=1 - настоящий GitHub: проверка версии, скачивание и подпись.
 func TestLive(t *testing.T) {
 	if os.Getenv("LIVE_UPDATE") == "" {
 		t.Skip("LIVE_UPDATE=1")

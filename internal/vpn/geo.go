@@ -21,7 +21,7 @@ import (
 
 // Базы блокировок runetfreedom: облегчённые версии только с российскими
 // категориями (ru-blocked, ru-available-only-inside, category-gov-ru...).
-// Полный geosite.dat весит 73 МБ, эти — около 7 МБ на двоих.
+// Полный geosite.dat весит 73 МБ, эти - около 7 МБ на двоих.
 type geoFile struct {
 	name    string   // как назван у нас (xray ищет geosite.dat/geoip.dat)
 	urls    []string // источники по очереди: GitHub Releases, jsDelivr, raw
@@ -51,7 +51,7 @@ var geoFiles = []geoFile{
 
 const geoMaxAge = 24 * time.Hour
 
-// EnsureGeo гарантирует, что базы на месте: если их нет — распаковывает
+// EnsureGeo гарантирует, что базы на месте: если их нет - распаковывает
 // вшитую копию. Сеть не нужна.
 func EnsureGeo(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -73,14 +73,14 @@ func EnsureGeo(dir string) error {
 		if err := writeAtomic(p, b); err != nil {
 			return err
 		}
-		// Время файла — «давно», чтобы фоновое обновление сразу взяло свежую.
+		// Время файла - «давно», чтобы фоновое обновление сразу взяло свежую.
 		old := time.Now().Add(-48 * time.Hour)
 		_ = os.Chtimes(p, old, old)
 	}
 	return nil
 }
 
-// UpdateGeo скачивает свежие базы, если текущие старше суток (force — всегда).
+// UpdateGeo скачивает свежие базы, если текущие старше суток (force - всегда).
 // Возвращает true, если что-то обновилось.
 func UpdateGeo(ctx context.Context, dir string, force bool) (bool, error) {
 	if err := EnsureGeo(dir); err != nil {

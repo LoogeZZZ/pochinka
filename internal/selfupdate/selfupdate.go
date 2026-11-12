@@ -1,4 +1,4 @@
-// Package selfupdate — новые версии Починки: проверка релизов на GitHub,
+// Package selfupdate - новые версии Починки: проверка релизов на GitHub,
 // скачивание и проверка подписи. Установку (замена exe, перезапуск) делает
 // пакет install.
 package selfupdate
@@ -25,7 +25,7 @@ const (
 	Repo       = "LoogeZZZ/pochinka"
 	ReleaseURL = "https://github.com/" + Repo + "/releases/"
 
-	// PubKey — открытый ключ подписи релизов (Ed25519). Закрытый — только у
+	// PubKey - открытый ключ подписи релизов (Ed25519). Закрытый - только у
 	// автора, вне репозитория (tools/signer). Починка работает с правами
 	// администратора, поэтому ставит только exe с верной подписью: подмена
 	// файла на GitHub или по дороге не пройдёт, а контрольная сумма с той же
@@ -35,7 +35,7 @@ const (
 	maxSize = 200 << 20
 )
 
-// Release — версия новее текущей. Пустая Version — обновлений нет.
+// Release - версия новее текущей. Пустая Version - обновлений нет.
 type Release struct {
 	Version string // "1.0.2"
 	URL     string // страница релиза
@@ -44,11 +44,11 @@ type Release struct {
 
 var tagRe = regexp.MustCompile(`^v?\d+(\.\d+){1,3}$`)
 
-// ValidTag — тег вида v1.2.3 (только такой уходит в ссылки и окно).
+// ValidTag - тег вида v1.2.3 (только такой уходит в ссылки и окно).
 func ValidTag(t string) bool { return tagRe.MatchString(t) }
 
-// latest — тег и страница последнего релиза. Сначала API, при лимите или
-// блокировке — редирект /releases/latest (у него лимита нет).
+// latest - тег и страница последнего релиза. Сначала API, при лимите или
+// блокировке - редирект /releases/latest (у него лимита нет).
 func latest(ctx context.Context, ua string) (tag, page string, err error) {
 	cl := &http.Client{Timeout: 20 * time.Second}
 	req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/repos/"+Repo+"/releases/latest", nil)
@@ -81,7 +81,7 @@ func latest(ctx context.Context, ua string) (tag, page string, err error) {
 	return loc[i+len("/tag/"):], loc, nil
 }
 
-// Check — есть ли релиз новее current. Тег и ссылку проверяем: дальше идут
+// Check - есть ли релиз новее current. Тег и ссылку проверяем: дальше идут
 // только версия вида 1.2.3 и только страница нашего репозитория.
 func Check(ctx context.Context, current string) (Release, error) {
 	tag, page, err := latest(ctx, "Pochinka/"+current)
@@ -131,19 +131,19 @@ func Download(ctx context.Context, tag, dir, ua string, onPct func(int)) (string
 	return exe, nil
 }
 
-// Verify — подпись Ed25519 над всем файлом.
+// Verify - подпись Ed25519 над всем файлом.
 func Verify(exe string, sigB64 []byte) error {
 	pub, _ := base64.StdEncoding.DecodeString(PubKey)
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(sigB64)))
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return errors.New("подпись обновления повреждена — установка отменена")
+		return errors.New("подпись обновления повреждена - установка отменена")
 	}
 	data, err := os.ReadFile(exe)
 	if err != nil {
 		return err
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), data, sig) {
-		return errors.New("подпись обновления не сходится — файл подменён или повреждён, установка отменена")
+		return errors.New("подпись обновления не сходится - файл подменён или повреждён, установка отменена")
 	}
 	return nil
 }

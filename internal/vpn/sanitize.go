@@ -8,13 +8,13 @@ import (
 // Подписку присылает чужой сервер, а xray у нас работает с правами
 // администратора. Поэтому из outbound'ов подписки берём только то, что нужно
 // для подключения, и вычищаем поля, которые заставляют xray трогать файлы
-// или систему: masterKeyLog (запись в любой путь, в т.ч. \\сетевой — утечка
+// или систему: masterKeyLog (запись в любой путь, в т.ч. \\сетевой - утечка
 // NTLM), certificateFile/keyFile (чтение любых файлов), привязку к
 // интерфейсу/метке и т.п.
 
 // Протоколы основного outbound'а сервера.
 var allowedProxyProtocols = map[string]bool{
-	"vless": true, "vmess": true, "trojan": true, "shadowsocks": true, "hysteria": true,
+	"vless": true, "vmess": true, "trojan": true, "shadowsocks": true, "hysteria": true, "wireguard": true,
 }
 
 // Ключи, которые удаляются на любой глубине (сравнение без учёта регистра).
@@ -31,7 +31,7 @@ const (
 	maxInfoText = 1024
 )
 
-// sanitizeServer: false — сервер отбрасывается целиком.
+// sanitizeServer: false - сервер отбрасывается целиком.
 func sanitizeServer(s *Server) bool {
 	if s == nil || s.Outbound == nil {
 		return false
@@ -68,7 +68,7 @@ func sanitizeServer(s *Server) bool {
 }
 
 // scrub рекурсивно удаляет запрещённые ключи. dialerProxy (ссылка на
-// цепочку внутри той же подписки) оставляем — её переименовывает collectDialers.
+// цепочку внутри той же подписки) оставляем - её переименовывает collectDialers.
 func scrub(v any) {
 	switch t := v.(type) {
 	case map[string]any:

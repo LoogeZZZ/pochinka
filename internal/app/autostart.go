@@ -5,7 +5,7 @@ import (
 	"pochinka/internal/install"
 )
 
-// SetAutostart — переключатель «Запускать вместе с Windows».
+// SetAutostart - переключатель «Запускать вместе с Windows».
 func (a *App) SetAutostart(on bool) string {
 	var err error
 	if on {

@@ -14,6 +14,7 @@ import (
 
 	"pochinka/internal/applog"
 	"pochinka/internal/config"
+	"pochinka/internal/notify"
 	"pochinka/internal/paths"
 	"pochinka/internal/userlists"
 	"pochinka/internal/winutil"
@@ -46,13 +47,13 @@ type Manager struct {
 	onChange func()
 	run      *runner
 
-	op sync.Mutex // сериализует Start/Stop/Update — они не должны идти параллельно
+	op sync.Mutex // сериализует Start/Stop/Update - они не должны идти параллельно
 
 	mu    sync.Mutex
 	state State
 	want  bool // пользователь хочет, чтобы обход был включён
 	extra []string
-	// iface — индекс физического интерфейса, если включён VPN в режиме TUN:
+	// iface - индекс физического интерфейса, если включён VPN в режиме TUN:
 	// winws тогда перехватывает только его (--wf-iface), иначе он бы
 	// портил пакеты ещё и внутри виртуального адаптера.
 	iface int
@@ -110,7 +111,7 @@ func (m *Manager) onRunnerState(running bool, err error) {
 	})
 }
 
-// SetExtraDomains — домены, которые приложение само добавляет в обход
+// SetExtraDomains - домены, которые приложение само добавляет в обход
 // (например, домены Cloudflare-фолбэка Telegram-прокси).
 func (m *Manager) SetExtraDomains(d []string) {
 	m.mu.Lock()
@@ -160,9 +161,9 @@ func (m *Manager) ensureInstalled(ctx context.Context) error {
 		if IsInstalled(m.versionDir(v)) {
 			return nil
 		}
-		// Файлы пропали уже после установки — чаще всего их забрал антивирус
+		// Файлы пропали уже после установки - чаще всего их забрал антивирус
 		// (winws.exe и WinDivert он любит). Ставим заново.
-		applog.Printf("zapret: файлы версии %s пропали (антивирус?) — скачиваю заново", v)
+		applog.Printf("zapret: файлы версии %s пропали (антивирус?) - скачиваю заново", v)
 		_ = os.RemoveAll(m.versionDir(v))
 		m.mu.Lock()
 		m.state.Version = ""
@@ -187,10 +188,10 @@ func (m *Manager) ensureInstalled(ctx context.Context) error {
 	return nil
 }
 
-// Start включает обход. Безопасно вызывать повторно — перезапустит winws.
+// Start включает обход. Безопасно вызывать повторно - перезапустит winws.
 func (m *Manager) Start(ctx context.Context) error { return m.start(ctx, false) }
 
-// restartIfWanted — применить новые настройки, если обход включён. Проверка
+// restartIfWanted - применить новые настройки, если обход включён. Проверка
 // под той же блокировкой, что и запуск: иначе «Выключить» могло проскочить
 // между проверкой и стартом, и обход поднялся бы сам.
 func (m *Manager) restartIfWanted(ctx context.Context) error { return m.start(ctx, true) }
@@ -225,7 +226,7 @@ func (m *Manager) start(parent context.Context, ifWanted bool) error {
 	}()
 	err := m.startLocked(ctx)
 	if ctx.Err() != nil {
-		return ctx.Err() // отменили — Stop всё уберёт
+		return ctx.Err() // отменили - Stop всё уберёт
 	}
 	if err != nil {
 		m.set(func(s *State) { s.Status, s.Error = StatusError, err.Error() })
@@ -317,7 +318,7 @@ func (m *Manager) SetGameFilter(ctx context.Context, mode string) error {
 	return m.restartIfWanted(ctx)
 }
 
-// SetInterfaceFilter ограничивает winws одним интерфейсом (0 — все).
+// SetInterfaceFilter ограничивает winws одним интерфейсом (0 - все).
 func (m *Manager) SetInterfaceFilter(ctx context.Context, idx int) {
 	m.mu.Lock()
 	changed := m.iface != idx
@@ -331,7 +332,7 @@ func (m *Manager) SetInterfaceFilter(ctx context.Context, idx int) {
 
 }
 
-// HandledDomains — списки доменов, которые сейчас чинит zapret (пусто, если
+// HandledDomains - списки доменов, которые сейчас чинит zapret (пусто, если
 // он выключен). VPN пускает их напрямую: зачем гнать через сервер то, что и
 // так открывается.
 func (m *Manager) HandledDomains() string {
@@ -367,9 +368,9 @@ func (m *Manager) SetGameEnabled(ctx context.Context, id string, on bool) error 
 	return m.restartIfWanted(ctx)
 }
 
-// CheckUpdate проверяет новую версию zapret; если она есть — скачивает рядом
+// CheckUpdate проверяет новую версию zapret; если она есть - скачивает рядом
 // и переключается на неё. winws перезапускается только после того, как новая
-// версия полностью распакована, так что разрыв — доли секунды.
+// версия полностью распакована, так что разрыв - доли секунды.
 func (m *Manager) CheckUpdate(ctx context.Context) (updated bool, err error) {
 	// Ручная проверка и автообновление не должны качать одновременно: у них
 	// общая временная папка распаковки.
@@ -403,7 +404,7 @@ func (m *Manager) CheckUpdate(ctx context.Context) (updated bool, err error) {
 
 	if m.wanted() {
 		if err := m.startLocked(ctx); err != nil {
-			// Новая версия не взлетела — откатываемся на старую.
+			// Новая версия не взлетела - откатываемся на старую.
 			applog.Printf("zapret: %s не запустилась (%v), откат на %s", rel.Version, err, prev)
 			m.mu.Lock()
 			m.state.Version = prev
@@ -418,6 +419,7 @@ func (m *Manager) CheckUpdate(ctx context.Context) (updated bool, err error) {
 	}
 	m.onChange()
 	m.cleanupOldVersions(rel.Version, prev)
+	notify.Show(notify.Text("Обход обновлён", "Unblocking updated"), rel.Version)
 	return true, nil
 }
 
@@ -461,7 +463,7 @@ func (m *Manager) AutoUpdateLoop(ctx context.Context) {
 }
 
 // prepareLists кладёт пользовательские списки в папку версии. Оригинальные
-// списки релиза не трогаем — свои домены добавляются через *-user.txt, как
+// списки релиза не трогаем - свои домены добавляются через *-user.txt, как
 // и задумано в zapret-discord-youtube.
 func (m *Manager) prepareLists(dir string) error {
 	cfg := config.Load()
@@ -501,7 +503,7 @@ func (m *Manager) prepareLists(dir string) error {
 	return nil
 }
 
-// placeholders — заглушки для пустых списков, те же, что в service.bat.
+// placeholders - заглушки для пустых списков, те же, что в service.bat.
 var placeholders = map[string]string{
 	"list-general-user.txt":  "domain.example.abc",
 	"list-exclude-user.txt":  "domain.example.abc",
@@ -510,7 +512,7 @@ var placeholders = map[string]string{
 
 // patchReleaseExclude убирает домены из исключений релиза (list-exclude.txt).
 // Оригинал хранится рядом как .orig, и файл каждый раз собирается заново из
-// него — так выключение группы честно возвращает исключения на место.
+// него - так выключение группы честно возвращает исключения на место.
 func patchReleaseExclude(listsDir string, remove []string) error {
 	cur := filepath.Join(listsDir, "list-exclude.txt")
 	orig := cur + ".orig"
@@ -562,7 +564,7 @@ func stopForeignZapret(ourDir string) {
 		if !winutil.ServiceExists(svcName) {
 			continue
 		}
-		applog.Printf("zapret: найдена служба «%s» — останавливаю и перевожу в ручной запуск (два обхода мешают друг другу)", svcName)
+		applog.Printf("zapret: найдена служба «%s» - останавливаю и перевожу в ручной запуск (два обхода мешают друг другу)", svcName)
 		if err := winutil.StopService(svcName, 10*time.Second); err != nil {
 			applog.Printf("zapret: %v", err)
 		}
@@ -571,7 +573,7 @@ func stopForeignZapret(ourDir string) {
 	for _, exe := range []string{"goodbyedpi.exe"} {
 		pids, _ := winutil.FindProcesses(exe)
 		for _, pid := range pids {
-			applog.Printf("zapret: завершаю %s (pid %d) — он тоже перехватывает пакеты", exe, pid)
+			applog.Printf("zapret: завершаю %s (pid %d) - он тоже перехватывает пакеты", exe, pid)
 			_ = winutil.KillPID(pid)
 		}
 	}
@@ -586,7 +588,7 @@ func stopForeignZapret(ourDir string) {
 	}
 }
 
-// enableTCPTimestamps — как :tcp_enable в service.bat: часть стратегий
+// enableTCPTimestamps - как :tcp_enable в service.bat: часть стратегий
 // использует fooling=ts, без таймстемпов он не работает.
 func enableTCPTimestamps() {
 	cmd := exec.Command("netsh", "interface", "tcp", "set", "global", "timestamps=enabled")
@@ -594,6 +596,6 @@ func enableTCPTimestamps() {
 	_ = cmd.Run()
 }
 
-// ApplyLists — пересобрать списки и перезапустить обход, если он включён
+// ApplyLists - пересобрать списки и перезапустить обход, если он включён
 // (после правки своих списков в окне).
 func (m *Manager) ApplyLists(ctx context.Context) error { return m.restartIfWanted(ctx) }

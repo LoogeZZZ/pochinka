@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// wsConn — минимальный клиент WebSocket (RFC 6455), только бинарные кадры.
+// wsConn - минимальный клиент WebSocket (RFC 6455), только бинарные кадры.
 type wsConn struct {
 	c       net.Conn
 	r       *bufio.Reader
@@ -28,13 +28,13 @@ type wsConn struct {
 
 const maxWSMessage = 16 << 20
 
-// dialFunc — как устанавливать TCP; в тестах подменяется.
+// dialFunc - как устанавливать TCP; в тестах подменяется.
 type dialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 
 var defaultDial dialFunc = (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext
 
-// wsDial: TCP до addr (IP:443), TLS с SNI = sni (пусто — host), HTTP Upgrade
-// с Host = host. insecure — не проверять сертификат (только для фронтинга,
+// wsDial: TCP до addr (IP:443), TLS с SNI = sni (пусто - host), HTTP Upgrade
+// с Host = host. insecure - не проверять сертификат (только для фронтинга,
 // где SNI намеренно чужой).
 func wsDial(ctx context.Context, dial dialFunc, addr, host, sni, path string, secure, insecure bool, tlsCfg *tls.Config) (*wsConn, error) {
 	raw, err := dial(ctx, "tcp", addr)
@@ -161,7 +161,7 @@ func (w *wsConn) recv() ([]byte, error) {
 			n = binary.BigEndian.Uint64(b[:])
 		}
 		if n > maxWSMessage {
-			return nil, fmt.Errorf("websocket: кадр %d байт — слишком большой", n)
+			return nil, fmt.Errorf("websocket: кадр %d байт - слишком большой", n)
 		}
 		var mask []byte
 		if h[1]&0x80 != 0 {
@@ -226,7 +226,7 @@ func (w *wsConn) isClosed() bool {
 	return w.closed
 }
 
-// alive — соединение из пула ещё живо: сервер не закрыл его, пока оно
+// alive - соединение из пула ещё живо: сервер не закрыл его, пока оно
 // лежало без дела (иначе первый же пакет клиента ушёл бы в пустоту).
 func (w *wsConn) alive() bool {
 	if w.isClosed() {

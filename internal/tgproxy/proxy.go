@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// Stats — счётчики для окна.
+// Stats - счётчики для окна.
 type Stats struct {
 	Active   int64 `json:"active"`
 	Total    int64 `json:"total"`
@@ -25,12 +25,12 @@ type Stats struct {
 	BadHello int64 `json:"badHello"`
 }
 
-// Proxy — локальный MTProto-прокси.
+// Proxy - локальный MTProto-прокси.
 type Proxy struct {
 	secret      []byte
 	dcRedirects map[int]string
 	dial        dialFunc
-	tlsConfig   *tls.Config // nil — системные корневые сертификаты
+	tlsConfig   *tls.Config // nil - системные корневые сертификаты
 	cf          *cfDomains
 	pool        *wsPool
 	logf        func(format string, a ...any)
@@ -50,7 +50,7 @@ type Proxy struct {
 	stats Stats
 }
 
-// Options — настройки прокси (нулевые значения — по умолчанию).
+// Options - настройки прокси (нулевые значения - по умолчанию).
 type Options struct {
 	Listen      string // "127.0.0.1:1443"
 	Secret      []byte // 16 байт
@@ -62,7 +62,7 @@ type Options struct {
 }
 
 // Лимит одновременных клиентов: Telegram Desktop держит десятки соединений,
-// но не тысячи — защита от того, чтобы кто-то локально завалил процесс.
+// но не тысячи - защита от того, чтобы кто-то локально завалил процесс.
 const maxClients = 512
 
 func Start(o Options) (*Proxy, error) {
@@ -112,10 +112,10 @@ func Start(o Options) (*Proxy, error) {
 	return p, nil
 }
 
-// Addr — фактический адрес (если слушали порт 0).
+// Addr - фактический адрес (если слушали порт 0).
 func (p *Proxy) Addr() string { return p.ln.Addr().String() }
 
-// CFDomains — домены Cloudflare-фолбэка (для списков обхода zapret).
+// CFDomains - домены Cloudflare-фолбэка (для списков обхода zapret).
 func (p *Proxy) CFDomains() []string {
 	if p.cf == nil {
 		return nil
@@ -207,7 +207,7 @@ func (p *Proxy) handle(c net.Conn) {
 	_ = c.SetReadDeadline(time.Time{})
 	h := parseClientHello(hs, p.secret)
 	if h == nil {
-		// В журнал — не чаще раза в минуту: иначе любая локальная программа
+		// В журнал - не чаще раза в минуту: иначе любая локальная программа
 		// засыпала бы его мусорными подключениями.
 		if n := atomic.AddInt64(&p.stats.BadHello, 1); n == 1 || time.Since(p.lastBadLog()) > time.Minute {
 			p.logf("tg: чужое подключение (неверный секрет или протокол), всего %d", n)
@@ -251,10 +251,10 @@ func (p *Proxy) handle(c net.Conn) {
 		}
 	}
 	atomic.AddInt64(&p.stats.Failed, 1)
-	p.logf("tg: DC%d — ни один путь до Telegram не сработал", dc)
+	p.logf("tg: DC%d - ни один путь до Telegram не сработал", dc)
 }
 
-// cfConnect — WS через Cloudflare: kwsN.<домен>, TLS к самому домену.
+// cfConnect - WS через Cloudflare: kwsN.<домен>, TLS к самому домену.
 func (p *Proxy) cfConnect(dc int, media bool) *wsConn {
 	if dc == 203 {
 		dc = 2
@@ -275,7 +275,7 @@ func (p *Proxy) cfConnect(dc int, media bool) *wsConn {
 	return nil
 }
 
-// tcpConnect — прямой MTProto по TCP до DC (с откатом после неудач).
+// tcpConnect - прямой MTProto по TCP до DC (с откатом после неудач).
 func (p *Proxy) tcpConnect(dc int) net.Conn {
 	ip := dcDirectIPs[dc]
 	if ip == "" {
@@ -300,7 +300,7 @@ func (p *Proxy) tcpConnect(dc int) net.Conn {
 	return rc
 }
 
-// bridgeWS — клиент (TCP) ⇄ Telegram (WS) с перешифрованием.
+// bridgeWS - клиент (TCP) ⇄ Telegram (WS) с перешифрованием.
 func (p *Proxy) bridgeWS(c net.Conn, ws *wsConn, relay []byte, cc *cryptoCtx, tag [4]byte) {
 	defer ws.close()
 	if err := ws.send(relay); err != nil {
@@ -349,13 +349,13 @@ func (p *Proxy) bridgeWS(c net.Conn, ws *wsConn, relay []byte, cc *cryptoCtx, ta
 		}
 	}()
 	<-done
-	// Одна сторона закрылась — закрываем обе, чтобы вторая горутина вышла.
+	// Одна сторона закрылась - закрываем обе, чтобы вторая горутина вышла.
 	_ = c.Close()
 	ws.close()
 	<-done
 }
 
-// bridgeTCP — клиент ⇄ DC напрямую по TCP.
+// bridgeTCP - клиент ⇄ DC напрямую по TCP.
 func (p *Proxy) bridgeTCP(c net.Conn, rc net.Conn, relay []byte, cc *cryptoCtx) {
 	defer rc.Close()
 	if _, err := rc.Write(relay); err != nil {

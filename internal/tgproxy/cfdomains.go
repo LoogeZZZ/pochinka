@@ -12,7 +12,7 @@ import (
 
 // Домены Cloudflare-прокси из оригинала: kwsN.<домен> проксируется
 // Cloudflare'ом на дата-центры Telegram. В исходниках хранятся слегка
-// «зашифрованными» (сдвиг букв), расшифровка — как в config.py.
+// «зашифрованными» (сдвиг букв), расшифровка - как в config.py.
 var cfEncoded = []string{
 	"virkgj.com", "vmmzovy.com", "mkuosckvso.com", "zaewayzmplad.com", "twdmbzcm.com",
 	"awzwsldi.com", "clngqrflngqin.com", "tjacxbqtj.com", "bxaxtxmrw.com", "dmohrsgmohcrwb.com",
@@ -22,7 +22,7 @@ var cfEncoded = []string{
 
 const cfDomainsURL = "https://raw.githubusercontent.com/Flowseal/tg-ws-proxy/main/.github/cfproxy-domains.txt"
 
-// decodeCF — обратный сдвиг букв на их количество, ".com" → ".co.uk".
+// decodeCF - обратный сдвиг букв на их количество, ".com" → ".co.uk".
 func decodeCF(s string) string {
 	if !strings.HasSuffix(s, ".com") {
 		return s
@@ -69,7 +69,7 @@ func validDomain(d string) bool {
 	return true
 }
 
-// cfDomains — текущий список доменов Cloudflare-фолбэка и «рабочий» домен
+// cfDomains - текущий список доменов Cloudflare-фолбэка и «рабочий» домен
 // для каждого DC (последний сработавший пробуем первым).
 type cfDomains struct {
 	mu     sync.Mutex
@@ -95,14 +95,14 @@ func (c *cfDomains) set(list []string) {
 	c.perDC = map[int]string{}
 }
 
-// All — все домены (для добавления в списки обхода zapret).
+// All - все домены (для добавления в списки обхода zapret).
 func (c *cfDomains) all() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return append([]string(nil), c.list...)
 }
 
-// forDC — порядок перебора доменов для DC: последний рабочий, затем остальные вперемешку.
+// forDC - порядок перебора доменов для DC: последний рабочий, затем остальные вперемешку.
 func (c *cfDomains) forDC(dc int) []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -128,7 +128,7 @@ func (c *cfDomains) worked(dc int, d string) {
 }
 
 // refresh подтягивает свежий список с GitHub автора (раз в час). Мусор в
-// ответе отбрасывается; если годных меньше трёх — список не меняем.
+// ответе отбрасывается; если годных меньше трёх - список не меняем.
 func (c *cfDomains) refresh(ctx context.Context) {
 	req, _ := http.NewRequestWithContext(ctx, "GET", cfDomainsURL, nil)
 	req.Header.Set("User-Agent", "tg-ws-proxy")
@@ -159,7 +159,7 @@ func (c *cfDomains) refresh(ctx context.Context) {
 	}
 }
 
-// DefaultCFDomains — встроенный список доменов Cloudflare-фолбэка (для
+// DefaultCFDomains - встроенный список доменов Cloudflare-фолбэка (для
 // добавления в обход zapret ещё до запуска прокси).
 func DefaultCFDomains() []string {
 	var out []string

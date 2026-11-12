@@ -37,7 +37,7 @@ func heapMB() float64 {
 	return float64(m.HeapAlloc) / (1 << 20)
 }
 
-// Запуск/остановка движка и замеры пинга (каждый — свой временный xray)
+// Запуск/остановка движка и замеры пинга (каждый - свой временный xray)
 // повторяются десятки раз: горутины, соединения и память должны вернуться.
 func TestNoLeakEngineAndPing(t *testing.T) {
 	geo := os.Getenv("GEO_TEST_DIR")
@@ -107,7 +107,7 @@ func TestNoLeakEngineAndPing(t *testing.T) {
 	}
 }
 
-// startVlessServer — минимальный VLESS-сервер (без шифрования): читает
+// startVlessServer - минимальный VLESS-сервер (без шифрования): читает
 // заголовок, соединяется с целью и пробрасывает данные. Второй xray не
 // годится: свежие версии не выпускают трафик на 127.0.0.1.
 func startVlessServer(t *testing.T, port int, uuid string) {

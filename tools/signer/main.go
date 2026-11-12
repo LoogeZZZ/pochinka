@@ -1,8 +1,8 @@
-// signer — подпись релизов Починки (Ed25519).
+// signer - подпись релизов Починки (Ed25519).
 //
-//	go run ./tools/signer keygen          — создать ключ (один раз)
-//	go run ./tools/signer sign file.exe   — создать file.exe.sig
-//	go run ./tools/signer verify file.exe — проверить подпись вшитым ключом
+//	go run ./tools/signer keygen          - создать ключ (один раз)
+//	go run ./tools/signer sign file.exe   - создать file.exe.sig
+//	go run ./tools/signer verify file.exe - проверить подпись вшитым ключом
 //
 // Закрытый ключ лежит вне репозитория: %USERPROFILE%\.pochinka-release\signing.key.
 // Его нельзя терять и нельзя никому отдавать: кто им владеет, тот может
@@ -71,7 +71,7 @@ func keygen() error {
 func loadKey() (ed25519.PrivateKey, error) {
 	b, err := os.ReadFile(keyPath())
 	if err != nil {
-		return nil, fmt.Errorf("нет ключа %s — сначала keygen", keyPath())
+		return nil, fmt.Errorf("нет ключа %s - сначала keygen", keyPath())
 	}
 	seed, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(b)))
 	if err != nil || len(seed) != ed25519.SeedSize {

@@ -10,7 +10,7 @@ import (
 	"pochinka/internal/userlists"
 )
 
-// UserRules — свои правила VPN: домены, адреса и программы.
+// UserRules - свои правила VPN: домены, адреса и программы.
 type UserRules struct {
 	Domains []string // в формате правил xray (см. DomainRules)
 	IPs     []string // адреса и подсети
@@ -32,7 +32,7 @@ func ParseUserRules(text string) UserRules {
 		switch {
 		case userlists.IsProgram(line):
 			// xray сравнивает имя процесса точно (без .exe, с учётом
-			// регистра), а пользователь пишет как помнит — добавляем
+			// регистра), а пользователь пишет как помнит - добавляем
 			// написания «как есть», строчными и с заглавной.
 			name := line[:len(line)-4]
 			for _, v := range []string{name, strings.ToLower(name), capitalize(strings.ToLower(name))} {
@@ -67,7 +67,7 @@ func capitalize(s string) string {
 	return string(unicode.ToUpper(r)) + s[n:]
 }
 
-// readUserRules — список по ID (vpn-sites, vpn-direct).
+// readUserRules - список по ID (vpn-sites, vpn-direct).
 func readUserRules(id string) UserRules {
 	l, ok := userlists.Get(id)
 	if !ok {
@@ -80,14 +80,14 @@ func readUserRules(id string) UserRules {
 	return ParseUserRules(text)
 }
 
-// patternRule — шаблон домена в правило xray. ok=false — это не шаблон
-// (или шаблон неверный — тогда строку пропускаем: из-за одной кривой строки
+// patternRule - шаблон домена в правило xray. ok=false - это не шаблон
+// (или шаблон неверный - тогда строку пропускаем: из-за одной кривой строки
 // VPN не должен перестать запускаться).
 //
 //	regexp:<re>, /<re>/ → regexp:<re> (синтаксис Go, как в xray)
 //	keyword:<слово>     → keyword:<слово>
-//	yandex.*, a*b.com   → regexp:^…$ (звёздочка — любые символы);
-//	                      «*.» в начале — «сам домен или любой поддомен»
+//	yandex.*, a*b.com   → regexp:^…$ (звёздочка - любые символы);
+//	                      «*.» в начале - «сам домен или любой поддомен»
 func patternRule(line string) (string, bool) {
 	l := strings.ToLower(line)
 	switch {

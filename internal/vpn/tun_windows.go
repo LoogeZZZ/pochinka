@@ -29,11 +29,11 @@ var (
 // загружает по полному пути.
 //
 // Библиотека ищет DLL только в папке программы и в System32
-// (LOAD_LIBRARY_SEARCH_APPLICATION_DIR|SYSTEM32) — загруженную из другой
-// папки копию она не видит. Поэтому DLL — рядом с exe, но только если это
+// (LOAD_LIBRARY_SEARCH_APPLICATION_DIR|SYSTEM32) - загруженную из другой
+// папки копию она не видит. Поэтому DLL - рядом с exe, но только если это
 // установленная копия в Program Files: туда без прав администратора не
 // записать. Exe в «Загрузках» рядом с собой DLL не кладёт (её подменили бы
-// между записью и загрузкой) — такой запуск main() сразу передаёт
+// между записью и загрузкой) - такой запуск main() сразу передаёт
 // установленной копии; здесь остаётся запасной путь через папку данных.
 func ensureWintun() error {
 	wintunOnce.Do(func() {
@@ -69,7 +69,7 @@ var (
 	getBestInterfaceP = iphlpapi.NewProc("GetBestInterface")
 )
 
-// adapter — сетевой адаптер Windows с тем, что нам о нём важно.
+// adapter - сетевой адаптер Windows с тем, что нам о нём важно.
 type adapter struct {
 	index       int
 	name, descr string
@@ -123,7 +123,7 @@ func isVirtual(a adapter) bool {
 	return false
 }
 
-// PhysicalInterface — настоящая сетевая карта (Ethernet или Wi‑Fi со
+// PhysicalInterface - настоящая сетевая карта (Ethernet или Wi‑Fi со
 // шлюзом). Не «куда сейчас идёт маршрут по умолчанию»: если работает другой
 // VPN в режиме TUN (Happ, v2rayN...), маршрут ведёт в его туннель, и наши
 // соединения, привязанные туда, ломаются.
@@ -148,7 +148,7 @@ func PhysicalInterface() (*net.Interface, error) {
 	return net.InterfaceByIndex(best.index)
 }
 
-// waitTunGone ждёт, пока адаптер name исчезнет из системы. true — исчез.
+// waitTunGone ждёт, пока адаптер name исчезнет из системы. true - исчез.
 func waitTunGone(name string, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
@@ -160,9 +160,9 @@ func waitTunGone(name string, timeout time.Duration) bool {
 	return false
 }
 
-// ForeignVPN — имя чужого VPN-адаптера, который сейчас перехватывает
+// ForeignVPN - имя чужого VPN-адаптера, который сейчас перехватывает
 // интернет (маршрут к 1.1.1.1 идёт не через сетевую карту и не через нас).
-// Пустая строка — всё чисто.
+// Пустая строка - всё чисто.
 func ForeignVPN() string {
 	addr := netip.MustParseAddr("1.1.1.1").As4()
 	ip := *(*uint32)(unsafe.Pointer(&addr[0]))
@@ -191,7 +191,7 @@ func ForeignVPN() string {
 
 // setupTunRoutes ждёт появления адаптера, даёт ему адрес и заворачивает в
 // него весь IPv4 двумя маршрутами /1 (они точнее основного 0.0.0.0/0, и при
-// этом сам основной маршрут не трогаем — после выхода всё как было).
+// этом сам основной маршрут не трогаем - после выхода всё как было).
 // Маршруты store=active: исчезают вместе с адаптером и после перезагрузки.
 func setupTunRoutes(name string) error {
 	var ifc *net.Interface

@@ -1,10 +1,10 @@
-// Package securedns — «Защищённый DNS»: DNS-серверы Google/Cloudflare/
+// Package securedns - «Защищённый DNS»: DNS-серверы Google/Cloudflare/
 // Quad9 на сетевых картах с шифрованием DoH (встроено в Windows 11).
 // Нужно, когда DNS провайдера не отдаёт адрес сайта (YouTube и т.п.):
-// zapret это не чинит — он работает уже с соединением.
+// zapret это не чинит - он работает уже с соединением.
 //
 // Прежние настройки каждой карты (вручную заданные серверы или «от
-// роутера») запоминаются и возвращаются при выключении — в том числе
+// роутера») запоминаются и возвращаются при выключении - в том числе
 // при удалении программы.
 package securedns
 
@@ -25,7 +25,7 @@ import (
 	"pochinka/internal/paths"
 )
 
-// Provider — набор серверов одного сервиса.
+// Provider - набор серверов одного сервиса.
 type Provider struct {
 	ID, Name string
 	V4, V6   []string
@@ -50,18 +50,18 @@ func Find(id string) (Provider, bool) {
 	return Provider{}, false
 }
 
-// adapter — сетевая карта, которой меняем DNS.
+// adapter - сетевая карта, которой меняем DNS.
 type adapter struct {
-	GUID string `json:"guid"` // {…} — ключ в реестре
+	GUID string `json:"guid"` // {…} - ключ в реестре
 	Name string `json:"name"` // для netsh
-	// Прежние вручную заданные серверы; пусто — были «от роутера» (DHCP).
+	// Прежние вручную заданные серверы; пусто - были «от роутера» (DHCP).
 	V4 string `json:"v4"`
 	V6 string `json:"v6"`
 }
 
 func statePath() string { return filepath.Join(paths.DataDir(), "securedns-prev.json") }
 
-// adapters — работающие сетевые карты с выходом в сеть (без виртуальных:
+// adapters - работающие сетевые карты с выходом в сеть (без виртуальных:
 // TUN, VPN, Hyper-V и т.п. не трогаем).
 func adapters() ([]adapter, error) {
 	size := uint32(16 << 10)
@@ -108,7 +108,7 @@ func virtual(s string) bool {
 	return false
 }
 
-// staticServers — вручную заданные DNS карты (пусто — «от роутера»).
+// staticServers - вручную заданные DNS карты (пусто - «от роутера»).
 func staticServers(guid string, v6 bool) string {
 	path := `SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\` + guid
 	if v6 {
@@ -151,12 +151,12 @@ func setServers(name, family string, servers []string) error {
 	return nil
 }
 
-// DoHSupported — шифрование DNS встроено в Windows 11 (сборка 22000+).
+// DoHSupported - шифрование DNS встроено в Windows 11 (сборка 22000+).
 func DoHSupported() bool { return windows.RtlGetVersion().BuildNumber >= 22000 }
 
 // Enable ставит серверы провайдера на все карты. Прежние настройки
-// запоминаются только при первом включении (повторное — смена провайдера
-// или новая карта — не затирает исходные).
+// запоминаются только при первом включении (повторное - смена провайдера
+// или новая карта - не затирает исходные).
 func Enable(p Provider) error {
 	list, err := adapters()
 	if err != nil {
@@ -179,8 +179,8 @@ func Enable(p Provider) error {
 	}
 	if DoHSupported() {
 		for _, ip := range append(append([]string(nil), p.V4...), p.V6...) {
-			// add — новая запись; если такая уже есть (Windows знает
-			// Google/Cloudflare/Quad9 сама) — set обновляет её.
+			// add - новая запись; если такая уже есть (Windows знает
+			// Google/Cloudflare/Quad9 сама) - set обновляет её.
 			if netsh("dns", "add", "encryption", "server="+ip, "dohtemplate="+p.DoH, "autoupgrade=yes", "udpfallback=no") != nil {
 				_ = netsh("dns", "set", "encryption", "server="+ip, "dohtemplate="+p.DoH, "autoupgrade=yes", "udpfallback=no")
 			}
@@ -191,7 +191,7 @@ func Enable(p Provider) error {
 		if err := setServers(a.Name, "ipv4", p.V4); err != nil {
 			errs = append(errs, err.Error())
 		}
-		_ = setServers(a.Name, "ipv6", p.V6) // IPv6 может быть выключен — не ошибка
+		_ = setServers(a.Name, "ipv6", p.V6) // IPv6 может быть выключен - не ошибка
 	}
 	flush()
 	if len(errs) > 0 {
@@ -218,7 +218,7 @@ func Disable() error {
 	return nil
 }
 
-// Active — включён ли (есть запомненные прежние настройки).
+// Active - включён ли (есть запомненные прежние настройки).
 func Active() bool {
 	_, err := os.Stat(statePath())
 	return err == nil

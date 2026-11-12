@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	neturl "net/url"
 	"strconv"
@@ -19,13 +20,13 @@ import (
 	"pochinka/internal/config"
 )
 
-// SubInfo — сведения о подписке из заголовков ответа панели.
+// SubInfo - сведения о подписке из заголовков ответа панели.
 type SubInfo struct {
 	Title      string `json:"title"`
 	Upload     int64  `json:"upload"`
 	Download   int64  `json:"download"`
-	Total      int64  `json:"total"`  // 0 — безлимит
-	Expire     int64  `json:"expire"` // unix-время, 0 — бессрочно
+	Total      int64  `json:"total"`  // 0 - безлимит
+	Expire     int64  `json:"expire"` // unix-время, 0 - бессрочно
 	SupportURL string `json:"supportUrl"`
 	WebPage    string `json:"webPage"`
 	Announce   string `json:"announce"`
@@ -36,7 +37,7 @@ type SubInfo struct {
 // FetchSubscription скачивает и разбирает подписку.
 //
 // User-Agent v2rayN: панели (Remnawave, Marzban, 3x-ui) отдают на него
-// обычный список ссылок, а иногда xray-JSON — разбираем оба варианта.
+// обычный список ссылок, а иногда xray-JSON - разбираем оба варианта.
 func FetchSubscription(ctx context.Context, subURL string) ([]*Server, SubInfo, error) {
 	subURL = strings.TrimSpace(subURL)
 	var info SubInfo
@@ -63,7 +64,7 @@ func FetchSubscription(ctx context.Context, subURL string) ([]*Server, SubInfo, 
 	c := &http.Client{Timeout: 25 * time.Second}
 	resp, err := c.Do(req)
 	if err != nil {
-		// Текст ошибки *url.Error содержит всю ссылку с токеном доступа —
+		// Текст ошибки *url.Error содержит всю ссылку с токеном доступа -
 		// в окно и журнал отдаём только причину.
 		var ue *neturl.Error
 		if errors.As(err, &ue) {
@@ -76,9 +77,9 @@ func FetchSubscription(ctx context.Context, subURL string) ([]*Server, SubInfo, 
 		// Remnawave с лимитом устройств отвечает 404 и без HWID, и когда
 		// лимит исчерпан.
 		if !sendHWID {
-			return nil, info, errors.New("подписка: HTTP 404 — возможно, панель требует HWID: включите «Отправлять HWID устройства»")
+			return nil, info, errors.New("подписка: HTTP 404 - возможно, панель требует HWID: включите «Отправлять HWID устройства»")
 		}
-		return nil, info, errors.New("подписка: HTTP 404 — ссылка устарела или закончился лимит устройств (удалите старое устройство в личном кабинете)")
+		return nil, info, errors.New("подписка: HTTP 404 - ссылка устарела или закончился лимит устройств (удалите старое устройство в личном кабинете)")
 	}
 	if resp.StatusCode != 200 {
 		return nil, info, fmt.Errorf("подписка: HTTP %d", resp.StatusCode)
@@ -212,6 +213,7 @@ func parseXrayJSON(b []byte) ([]*Server, error) {
 			n, _ := ss["network"].(string)
 			s.UDP = n == "kcp" || n == "hysteria"
 		}
+		s.UDP = s.UDP || s.Protocol == "wireguard" // WG работает поверх UDP
 		s.Extra = collectDialers(s.Outbound, byTag, 0)
 		out = append(out, s)
 	}
@@ -254,10 +256,25 @@ func outboundEndpoint(ob map[string]any) (string, int) {
 			}
 		}
 	}
+	// WireGuard: адрес сервера - в endpoint первого peer'а с адресом.
+	if arr, ok := st["peers"].([]any); ok {
+		for _, p := range arr {
+			pm, _ := p.(map[string]any)
+			ep, _ := pm["endpoint"].(string)
+			host, portS, err := net.SplitHostPort(ep)
+			if err != nil {
+				continue
+			}
+			port, _ := strconv.Atoi(portS)
+			if host != "" && port > 0 {
+				return host, port
+			}
+		}
+	}
 	return pick(st)
 }
 
-// rejected — серверы, отброшенные при последней загрузке (только для
+// rejected - серверы, отброшенные при последней загрузке (только для
 // журнала). Один негодный сервер в общем конфиге уронил бы весь VPN,
 // поэтому их отбрасываем по одному, а не все разом.
 var (
@@ -281,7 +298,7 @@ func lastRejected() []string {
 func validateServers(list []*Server) (ok []*Server, rej []string) {
 	for _, s := range list {
 		if len(ok) >= maxServers {
-			rej = append(rej, fmt.Sprintf("ещё %d серверов — больше %d не берём", len(list)-len(ok)-len(rej), maxServers))
+			rej = append(rej, fmt.Sprintf("ещё %d серверов - больше %d не берём", len(list)-len(ok)-len(rej), maxServers))
 			break
 		}
 		if !sanitizeServer(s) {
@@ -354,7 +371,7 @@ func withTag(ob map[string]any, tag string) map[string]any {
 	return c
 }
 
-// safeURL — только https/http/tg-ссылки разумной длины (их можно открыть из окна).
+// safeURL - только https/http/tg-ссылки разумной длины (их можно открыть из окна).
 func safeURL(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) > 512 {

@@ -15,7 +15,7 @@ const (
 
 const TunName = "Pochinka"
 
-// tunNames — имена адаптера по порядку. Запасное нужно, когда прошлый
+// tunNames - имена адаптера по порядку. Запасное нужно, когда прошлый
 // адаптер ещё удаляется Windows (бывает минутами после перезапуска): новый с
 // тем же именем и GUID в это время не создаётся («cannot find the file»).
 var tunNames = []string{TunName, TunName + " 2"}
@@ -25,7 +25,7 @@ var (
 	tunCur = TunName
 )
 
-// curTun — имя адаптера текущего (или последнего) подключения.
+// curTun - имя адаптера текущего (или последнего) подключения.
 func curTun() string {
 	tunMu.Lock()
 	defer tunMu.Unlock()
@@ -38,7 +38,7 @@ func setCurTun(n string) {
 	tunMu.Unlock()
 }
 
-// BuildOptions — всё, что нужно для конфига xray.
+// BuildOptions - всё, что нужно для конфига xray.
 type BuildOptions struct {
 	Servers   []*Server // один выбранный сервер или все (Auto)
 	Auto      bool      // балансировщик leastPing по всем серверам
@@ -46,23 +46,23 @@ type BuildOptions struct {
 	HTTPPort  int
 	SocksPort int
 	LogFile   string
-	// PhysIface — физический интерфейс (только TUN): исходящие соединения
+	// PhysIface - физический интерфейс (только TUN): исходящие соединения
 	// xray привязываются к нему, иначе они вернутся в TUN и зациклятся.
 	PhysIface string
-	// ZapretDomains — то, что чинит zapret: пока он работает, эти сайты
+	// ZapretDomains - то, что чинит zapret: пока он работает, эти сайты
 	// идут напрямую, а не через VPN (VPN нужен только там, где zapret бессилен).
 	ZapretDomains []string
-	// UserDomains — сайты, которые пользователь сам отправил через VPN.
+	// UserDomains - сайты, которые пользователь сам отправил через VPN.
 	UserDomains []string
-	// UserProxy / UserDirect — свои правила «всегда через VPN» и «всегда
+	// UserProxy / UserDirect - свои правила «всегда через VPN» и «всегда
 	// напрямую» (домены, адреса, программы). Важнее всех остальных правил,
 	// кроме локальной сети: пользователь решил явно.
 	UserProxy, UserDirect UserRules
-	// RouteAll — через VPN всё, кроме российского (а не только базу
+	// RouteAll - через VPN всё, кроме российского (а не только базу
 	// блокировок). ТСПУ «замедляет» зарубежные хостинги (DigitalOcean,
-	// Hetzner…) без всяких списков — в этом режиме они идут через VPN.
+	// Hetzner…) без всяких списков - в этом режиме они идут через VPN.
 	RouteAll bool
-	// TunName — имя адаптера (пусто — основное).
+	// TunName - имя адаптера (пусто - основное).
 	TunName string
 }
 
@@ -73,7 +73,7 @@ func (o BuildOptions) tunName() string {
 	return TunName
 }
 
-// ruDirect — что в режиме «всё, кроме российского» всё равно идёт напрямую:
+// ruDirect - что в режиме «всё, кроме российского» всё равно идёт напрямую:
 // российские зоны и крупные российские сервисы на зарубежных доменах.
 func ruDirect() []string {
 	out := []string{"domain:ru", "domain:su", "domain:xn--p1ai", "domain:xn--d1acj3b", "domain:moscow", "domain:xn--80adxhks"}
@@ -92,7 +92,7 @@ var telegramCIDRs = []string{
 }
 
 // rewireForProbe переделывает обычный конфиг в «измерительный»: вместо
-// маршрутов по базе блокировок — по отдельному HTTP-входу на каждый сервер.
+// маршрутов по базе блокировок - по отдельному HTTP-входу на каждый сервер.
 func rewireForProbe(cfgJSON []byte, ports []int) ([]byte, error) {
 	var cfg map[string]any
 	if err := json.Unmarshal(cfgJSON, &cfg); err != nil {
@@ -112,13 +112,13 @@ func rewireForProbe(cfgJSON []byte, ports []int) ([]byte, error) {
 	return json.Marshal(cfg)
 }
 
-// GeoBlockedServices — блокируют пользователей из РФ сами (а не РКН).
+// GeoBlockedServices - блокируют пользователей из РФ сами (а не РКН).
 var GeoBlockedServices = []string{
 	// Anthropic: Claude, Claude Code, API
 	"domain:anthropic.com", "domain:claude.ai", "domain:claude.com", "domain:clau.de", "domain:claudeusercontent.com",
 	// OpenAI
 	"domain:openai.com", "domain:chatgpt.com", "domain:oaistatic.com", "domain:oaiusercontent.com", "domain:sora.com",
-	// Google Gemini / AI Studio / NotebookLM (остальной Google — напрямую)
+	// Google Gemini / AI Studio / NotebookLM (остальной Google - напрямую)
 	"domain:gemini.google.com", "domain:aistudio.google.com", "domain:notebooklm.google.com",
 	"domain:generativelanguage.googleapis.com", "domain:alkalimakersuite-pa.clients6.google.com", "domain:labs.google",
 	// xAI, Perplexity, Mistral, Cursor, Copilot
@@ -137,7 +137,7 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 		return nil
 	}
 
-	// Первый outbound — маршрут по умолчанию. У нас это «напрямую».
+	// Первый outbound - маршрут по умолчанию. У нас это «напрямую».
 	direct := map[string]any{"tag": "direct", "protocol": "freedom", "settings": map[string]any{}}
 	if so := sockopt(); so != nil {
 		direct["streamSettings"] = map[string]any{"sockopt": so}
@@ -211,7 +211,7 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 		map[string]any{"type": "field", "domain": []string{"geosite:private"}, "outboundTag": "direct"},
 	}
 	// Свои правила: сначала «напрямую», потом «через VPN» (если адрес попал в
-	// оба списка, безопаснее не уводить его в VPN). Программы — последними в
+	// оба списка, безопаснее не уводить его в VPN). Программы - последними в
 	// каждой группе: поиск процесса по соединению дороже сравнения доменов.
 	proxy := o.UserProxy
 	proxy.Domains = append(append([]string(nil), proxy.Domains...), o.UserDomains...)
@@ -229,14 +229,14 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 	toDirect := func(r map[string]any) map[string]any { r["outboundTag"] = "direct"; return r }
 	addUser(o.UserDirect, toDirect)
 	if !proxy.empty() {
-		// QUIC через VPN не пройдёт (Vision его отвергает) — отбиваем сразу.
+		// QUIC через VPN не пройдёт (Vision его отвергает) - отбиваем сразу.
 		if len(proxy.Domains) > 0 {
 			rules = append(rules, map[string]any{"type": "field", "network": "udp", "port": "443", "domain": proxy.Domains, "outboundTag": "block"})
 		}
 		addUser(proxy, toProxy)
 	}
 	rules = append(rules,
-		// Госуслуги, банки и сервисы «только из РФ» — никогда через VPN.
+		// Госуслуги, банки и сервисы «только из РФ» - никогда через VPN.
 		map[string]any{"type": "field", "domain": []string{"geosite:category-gov-ru", "geosite:ru-available-only-inside"}, "outboundTag": "direct"},
 	)
 	// Сервисы, которые сами не пускают из России (РКН их не блокирует, поэтому
@@ -257,10 +257,10 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 	)
 	if o.RouteAll {
 		// Заблокированные .ru уже ушли в VPN правилом выше; остальное
-		// российское — напрямую, всё прочее — через VPN.
+		// российское - напрямую, всё прочее - через VPN.
 		rules = append(rules,
 			map[string]any{"type": "field", "domain": ruDirect(), "outboundTag": "direct"},
-			// QUIC через VPN не пройдёт (Vision его отвергает) — отбиваем
+			// QUIC через VPN не пройдёт (Vision его отвергает) - отбиваем
 			// сразу, браузер мгновенно переходит на TCP.
 			map[string]any{"type": "field", "network": "udp", "port": "443", "outboundTag": "block"},
 			toProxy(map[string]any{"type": "field", "network": "tcp,udp"}),
@@ -285,7 +285,7 @@ func BuildConfig(o BuildOptions) ([]byte, error) {
 			// routeOnly=true: домен из SNI нужен только для выбора маршрута,
 			// соединение идёт на исходный IP. С false xray иногда вытаскивал
 			// из Chrome домен с точкой в начале (".www.google.com") и падал на
-			// DNS (видно в диагностике). Подмены DNS провайдером у нас нет —
+			// DNS (видно в диагностике). Подмены DNS провайдером у нас нет -
 			// блокируют по SNI/IP, IP приходят настоящие.
 			"sniffing": map[string]any{"enabled": true, "destOverride": []string{"http", "tls", "quic"}, "routeOnly": true},
 		})

@@ -1,6 +1,6 @@
 //go:build windows
 
-// Package winutil — обвязка вокруг WinAPI, нужная для управления winws.
+// Package winutil - обвязка вокруг WinAPI, нужная для управления winws.
 package winutil
 
 import (
@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-// Job — job object с KILL_ON_JOB_CLOSE: когда наш процесс завершается (даже
+// Job - job object с KILL_ON_JOB_CLOSE: когда наш процесс завершается (даже
 // аварийно), Windows закрывает хэндл и убивает всё, что в job. Так winws не
 // остаётся висеть сиротой после краша приложения.
 type Job struct{ h windows.Handle }
@@ -72,7 +72,7 @@ func FindProcesses(exeName string) ([]uint32, error) {
 	return pids, nil
 }
 
-// ProcessPath — полный путь к exe процесса.
+// ProcessPath - полный путь к exe процесса.
 func ProcessPath(pid uint32) string {
 	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
@@ -115,7 +115,7 @@ func ServiceExists(name string) bool {
 	return true
 }
 
-// StopService останавливает службу и ждёт до timeout. Отсутствие службы — не ошибка.
+// StopService останавливает службу и ждёт до timeout. Отсутствие службы - не ошибка.
 func StopService(name string, timeout time.Duration) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -176,12 +176,12 @@ func SetServiceManual(name string) error {
 	return s.UpdateConfig(c)
 }
 
-// IsAdmin — запущены ли мы с повышенными правами.
+// IsAdmin - запущены ли мы с повышенными правами.
 func IsAdmin() bool {
 	return windows.GetCurrentProcessToken().IsElevated()
 }
 
-// DeleteService останавливает и удаляет службу. Отсутствие службы — не ошибка.
+// DeleteService останавливает и удаляет службу. Отсутствие службы - не ошибка.
 func DeleteService(name string) error {
 	_ = StopService(name, 5*time.Second)
 	m, err := mgr.Connect()

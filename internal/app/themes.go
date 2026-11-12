@@ -10,10 +10,10 @@ import (
 )
 
 // Темы: system | light | dark (style.css), готовые (frontend/dist/themes.js)
-// и custom — своя палитра из редактора. Здесь только то, что нужно Go:
+// и custom - своя палитра из редактора. Здесь только то, что нужно Go:
 // какие имена допустимы и каким цветом залить окно до загрузки страницы.
 
-// themeBackgrounds — фон готовых тем (совпадает с bg в themes.js).
+// themeBackgrounds - фон готовых тем (совпадает с bg в themes.js).
 var themeBackgrounds = map[string]string{
 	"dracula": "#21222c",
 	"nord":    "#2e3440",
@@ -36,8 +36,8 @@ func validTheme(name string) bool {
 	return ok
 }
 
-// validPalette — своя тема: ровно известные ключи, цвета только #rrggbb
-// (значения попадают в CSS — никаких выражений и url()).
+// validPalette - своя тема: ровно известные ключи, цвета только #rrggbb
+// (значения попадают в CSS - никаких выражений и url()).
 func validPalette(p map[string]string) bool {
 	if p == nil || (p["scheme"] != "light" && p["scheme"] != "dark") {
 		return false
@@ -85,7 +85,7 @@ func hexToRGBA(h string) *options.RGBA {
 	return &options.RGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 255}
 }
 
-// ThemeBackground — фон выбранной темы; nil — тема светлая/тёмная/системная.
+// ThemeBackground - фон выбранной темы; nil - тема светлая/тёмная/системная.
 func ThemeBackground(c config.Config) *options.RGBA {
 	if bg, ok := themeBackgrounds[c.Theme]; ok {
 		return hexToRGBA(bg)

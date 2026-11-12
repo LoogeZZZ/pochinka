@@ -1,11 +1,11 @@
-// Package tgproxy — локальный MTProto-прокси для Telegram Desktop, перенос
+// Package tgproxy - локальный MTProto-прокси для Telegram Desktop, перенос
 // ядра github.com/Flowseal/tg-ws-proxy (MIT) на Go.
 //
 // Telegram подключается к 127.0.0.1 как к обычному MTProto-прокси (секрет
 // "dd…"). Прокси расшифровывает obfuscated2-заголовок, узнаёт номер
 // дата-центра и пересылает трафик в Telegram через WebSocket
-// (wss://kwsN.web.telegram.org/apiws) — тот же канал, что использует
-// web.telegram.org, — перешифровывая поток между двумя сторонами.
+// (wss://kwsN.web.telegram.org/apiws) - тот же канал, что использует
+// web.telegram.org, - перешифровывая поток между двумя сторонами.
 package tgproxy
 
 import (
@@ -40,12 +40,12 @@ var reservedStarts = [][4]byte{
 	{0xee, 0xee, 0xee, 0xee}, {0xdd, 0xdd, 0xdd, 0xdd}, {0x16, 0x03, 0x01, 0x02},
 }
 
-// clientHello — разобранный заголовок клиента.
+// clientHello - разобранный заголовок клиента.
 type clientHello struct {
-	dc       int // номер DC (1..5, 203); для тестовых — +10000
+	dc       int // номер DC (1..5, 203); для тестовых - +10000
 	media    bool
 	protoTag [4]byte
-	prekeyIV []byte // 48 байт (prekey+iv) из заголовка — для ключей ответа
+	prekeyIV []byte // 48 байт (prekey+iv) из заголовка - для ключей ответа
 }
 
 func newCTR(key, iv []byte) cipher.Stream {
@@ -57,7 +57,7 @@ func newCTR(key, iv []byte) cipher.Stream {
 }
 
 // parseClientHello расшифровывает 64-байтный заголовок ключом из секрета.
-// nil — заголовок не наш (неверный секрет или протокол).
+// nil - заголовок не наш (неверный секрет или протокол).
 func parseClientHello(hs []byte, secret []byte) *clientHello {
 	if len(hs) != handshakeLen {
 		return nil
@@ -83,7 +83,7 @@ func parseClientHello(hs []byte, secret []byte) *clientHello {
 	return &clientHello{dc: dc, media: media, protoTag: tag, prekeyIV: append([]byte{}, prekeyIV...)}
 }
 
-// relayInit — наш собственный obfuscated2-заголовок для Telegram (без
+// relayInit - наш собственный obfuscated2-заголовок для Telegram (без
 // секрета: на стороне Telegram это обычный obfuscated2).
 func relayInit(tag [4]byte, dcIdx int) ([]byte, error) {
 	rnd := make([]byte, handshakeLen)
@@ -126,7 +126,7 @@ func relayInit(tag [4]byte, dcIdx int) ([]byte, error) {
 	return out, nil
 }
 
-// cryptoCtx — четыре потока шифрования моста.
+// cryptoCtx - четыре потока шифрования моста.
 type cryptoCtx struct {
 	cltDec cipher.Stream // расшифровать от клиента
 	cltEnc cipher.Stream // зашифровать клиенту

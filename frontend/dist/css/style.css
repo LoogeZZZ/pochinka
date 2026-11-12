@@ -6,7 +6,7 @@
   unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
 }
 
-/* Тема: светлая по умолчанию; тёмная — по системе (если не выбрана
+/* Тема: светлая по умолчанию; тёмная - по системе (если не выбрана
    светлая явно) или принудительно через <html data-theme="dark">. */
 :root {
   color-scheme: light;
@@ -179,6 +179,14 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
 
+.welcome-hero { min-height: 150px; flex: none; }
+.welcome-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+button.card.welcome { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+button.card.welcome:hover { border-color: var(--accent); }
+.w-title { font-weight: 600; font-size: 14.5px; }
+.w-sub { font-size: 12px; color: var(--muted); }
+.center-link { display: block; margin: 4px auto 0; }
+
 .list { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .list > * + * { border-top: 1px solid var(--line); }
 .item, .list li {
@@ -247,6 +255,19 @@ textarea {
   font: 12px/1.45 "Cascadia Mono", Consolas, monospace; user-select: text;
 }
 textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* Строки с полем ввода внутри списков (поиск серверов, свой сайт для
+   проверки): выглядят как обычные строки того же блока - инпут прозрачный,
+   без своей рамки и фона. */
+.site-add { cursor: text; }
+.site-add:hover { background: var(--surface); }
+.site-add input {
+  flex: 1; min-width: 0; border: none; background: none; outline: none; padding: 0;
+  color: var(--text); font: 13px/1.45 "Segoe UI", sans-serif;
+}
+.site-add input::placeholder { color: var(--muted); }
+.site-add input::-webkit-search-cancel-button { filter: invert(1); opacity: .5; }
+.site-add button { cursor: pointer; flex: none; }
 .add-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
 .err { margin-top: 8px; font-size: 12px; color: var(--bad); min-height: 0; }
 
@@ -269,10 +290,13 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .vcheck.wait { background: var(--hover); color: var(--muted); }
 .vcheck .link { align-self: flex-start; }
 .announce { font-size: 12px; padding: 8px 10px; border-radius: 8px; background: var(--hover); white-space: pre-wrap; }
+.announce.warn { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
+.two small.err { color: var(--bad); }
 .sub-links { display: flex; gap: 14px; }
 .sub-links .danger { margin-left: auto; }
 
 .servers li { min-height: 44px; }
+
 .srv { display: flex; flex-direction: column; min-width: 0; padding: 6px 0; }
 .srv-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .srv-meta { font-size: 11.5px; color: var(--muted); font-weight: 400; }
@@ -284,8 +308,10 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .ping.bad { color: var(--bad); }
 
 /* ---------- обход ---------- */
-.services li { cursor: default; }
+.services li { cursor: default; justify-content: flex-start; }
 .services li:hover { background: none; }
+.services li .val { margin-left: auto; }
+.services li .rm { flex: none; }
 .val { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
 .val::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
 li.ok .val { color: var(--on); }
@@ -369,6 +395,13 @@ li.wait .val::before { animation: blink 1s infinite; }
 .tp-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 4px; }
 .tp-dot.on { background: var(--on); } .tp-dot.bad { background: var(--bad); } .tp-dot.warn { background: var(--warn); }
 .tp-btn { display: inline-block; padding: 6px 12px; border-radius: 8px; background: var(--accent); color: var(--bg); font-size: 12px; font-weight: 600; }
+/* ---------- горячие клавиши ---------- */
+.hk-right { display: flex; align-items: center; gap: 10px; flex: none; }
+.hk-combo { font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+.hk-combo.muted { color: var(--muted); }
+#hotkeyList .item.capturing { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+#hotkeyList .item.capturing .hk-combo { color: var(--accent); font-weight: 600; }
+
 .chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .color-row .color-val { display: flex; align-items: center; gap: 8px; }
 .color-row code { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }

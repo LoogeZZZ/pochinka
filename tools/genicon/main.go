@@ -70,7 +70,7 @@ func render(size int, pal [2]rgb) *image.NRGBA {
 	return img
 }
 
-// shade — цвет точки в координатах 0..1.
+// shade - цвет точки в координатах 0..1.
 func shade(x, y float64, pal [2]rgb) (r, g, b, a float64) {
 	dx, dy := x-0.5, y-0.5
 	d := math.Hypot(dx, dy)
@@ -85,7 +85,7 @@ func shade(x, y float64, pal [2]rgb) (r, g, b, a float64) {
 
 	// Символ питания: дуга с разрывом сверху + вертикальная палочка.
 	const ringR, ringW = 0.22, 0.065
-	ang := math.Atan2(dx, -dy) // 0 — строго вверх
+	ang := math.Atan2(dx, -dy) // 0 - строго вверх
 	onRing := math.Abs(d-ringR) < ringW/2 && math.Abs(ang) > 0.62
 	onBar := math.Abs(dx) < ringW/2 && dy > -0.30 && dy < -0.02
 	// Скругления концов палочки.

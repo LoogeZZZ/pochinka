@@ -1,4 +1,4 @@
-// Package userlists — свои списки пользователя: домены для обхода,
+// Package userlists - свои списки пользователя: домены для обхода,
 // исключения, сайты через VPN. Лежат в папке данных, куда пишет только
 // администратор, поэтому редактируются из окна программы, а не Блокнотом:
 // Блокнот с правами пользователя не может их сохранить, а с правами
@@ -18,16 +18,16 @@ import (
 	"pochinka/internal/paths"
 )
 
-// Kind — что за строки в списке.
+// Kind - что за строки в списке.
 type Kind int
 
 const (
-	Domains Kind = iota // домены (формат zapret: «^» в начале — без поддоменов)
+	Domains Kind = iota // домены (формат zapret: «^» в начале - без поддоменов)
 	IPs                 // адреса и подсети
-	Mixed               // домены, адреса и программы (*.exe) — правила VPN
+	Mixed               // домены, адреса и программы (*.exe) - правила VPN
 )
 
-// List — один список.
+// List - один список.
 type List struct {
 	ID      string
 	File    string
@@ -48,7 +48,7 @@ var lists = []List{
 		Default: "# Всегда напрямую, мимо VPN: домены, IP/подсети и программы (*.exe), по одному в строке.\n# Например: mybank.ru, 10.0.0.0/8, steam.exe\n"},
 }
 
-// Get — список по ID.
+// Get - список по ID.
 func Get(id string) (List, bool) {
 	for _, l := range lists {
 		if l.ID == id {
@@ -58,7 +58,7 @@ func Get(id string) (List, bool) {
 	return List{}, false
 }
 
-// ByFile — список по имени файла (для zapret).
+// ByFile - список по имени файла (для zapret).
 func ByFile(name string) (List, bool) {
 	for _, l := range lists {
 		if l.File == name {
@@ -68,7 +68,7 @@ func ByFile(name string) (List, bool) {
 	return List{}, false
 }
 
-// Path — где лежит файл списка.
+// Path - где лежит файл списка.
 func (l List) Path() string { return filepath.Join(paths.UserDir(), l.File) }
 
 // Ensure создаёт файл со стартовым содержимым, если его нет.
@@ -79,7 +79,7 @@ func (l List) Ensure() error {
 	return nil
 }
 
-// Read — текст списка.
+// Read - текст списка.
 func (l List) Read() (string, error) {
 	if err := l.Ensure(); err != nil {
 		return "", err
@@ -97,7 +97,7 @@ const (
 )
 
 // Save проверяет каждую строку и записывает список. Ошибка называет первую
-// неверную строку — так пользователь сразу видит, что поправить.
+// неверную строку - так пользователь сразу видит, что поправить.
 func (l List) Save(text string) (int, error) {
 	if len(text) > maxBytes {
 		return 0, fmt.Errorf("список слишком большой (больше %d КБ)", maxBytes>>10)
@@ -120,12 +120,12 @@ func (l List) Save(text string) (int, error) {
 			continue
 		}
 		if l.Kind == Domains && IsPattern(line) {
-			return 0, fmt.Errorf("строка %d: «%s» — в списках обхода шаблоны не работают: zapret понимает только домены (поддомены учитываются сами, «*.» в начале можно)", i+1, clip(line, 60))
+			return 0, fmt.Errorf("строка %d: «%s» - в списках обхода шаблоны не работают: zapret понимает только домены (поддомены учитываются сами, «*.» в начале можно)", i+1, clip(line, 60))
 		}
 		v, ok := normalize(l.Kind, line)
 		if !ok {
 			if l.Kind == Mixed && IsPattern(line) {
-				return 0, fmt.Errorf("строка %d: «%s» — неверный шаблон (примеры: yandex.*, regexp:^img\\d+\\.example\\.com$, keyword:yandex)", i+1, clip(line, 60))
+				return 0, fmt.Errorf("строка %d: «%s» - неверный шаблон (примеры: yandex.*, regexp:^img\\d+\\.example\\.com$, keyword:yandex)", i+1, clip(line, 60))
 			}
 			what := "домен"
 			switch l.Kind {
@@ -134,7 +134,7 @@ func (l List) Save(text string) (int, error) {
 			case Mixed:
 				what = "домен, адрес/подсеть или программа .exe"
 			}
-			return 0, fmt.Errorf("строка %d: «%s» — не %s", i+1, clip(line, 60), what)
+			return 0, fmt.Errorf("строка %d: «%s» - не %s", i+1, clip(line, 60), what)
 		}
 		out = append(out, v)
 		n++
@@ -174,7 +174,7 @@ func normalize(k Kind, s string) (string, bool) {
 		}
 		return "", false
 	}
-	// Вставили ссылку — берём из неё домен.
+	// Вставили ссылку - берём из неё домен.
 	if i := strings.Index(s, "://"); i >= 0 {
 		s = s[i+3:]
 	}
@@ -194,8 +194,8 @@ func normalize(k Kind, s string) (string, bool) {
 	return d, true
 }
 
-// IsPattern — шаблон домена, а не сам домен: regexp:…, /…/, keyword:… или
-// звёздочка не только в начале («*.yandex.ru» — обычный домен с
+// IsPattern - шаблон домена, а не сам домен: regexp:…, /…/, keyword:… или
+// звёздочка не только в начале («*.yandex.ru» - обычный домен с
 // поддоменами). Шаблоны понимает xray (списки VPN), но не zapret.
 func IsPattern(s string) bool {
 	l := strings.ToLower(s)
@@ -248,10 +248,10 @@ func normalizePattern(s string) (string, bool) {
 	return g, true
 }
 
-// IsProgram — строка про программу: имя файла .exe (как в Диспетчере задач).
+// IsProgram - строка про программу: имя файла .exe (как в Диспетчере задач).
 func IsProgram(s string) bool { return strings.HasSuffix(strings.ToLower(s), ".exe") }
 
-// validProgram — только имя файла, без пути и спецсимволов.
+// validProgram - только имя файла, без пути и спецсимволов.
 func validProgram(s string) bool {
 	name := s[:len(s)-4]
 	if name == "" || len(s) > 128 {

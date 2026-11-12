@@ -27,7 +27,7 @@ import (
 //go:embed all:frontend/dist
 var frontend embed.FS
 
-// Тексты лицензий — в exe (Настройки → Лицензии).
+// Тексты лицензий - в exe (Настройки → Лицензии).
 //
 //go:embed LICENSE
 var licenseText string
@@ -36,7 +36,7 @@ var licenseText string
 var thirdPartyText string
 
 func main() {
-	// Без прав администратора — только запускаем себя с правами (через
+	// Без прав администратора - только запускаем себя с правами (через
 	// задачу Планировщика без UAC или один раз через UAC) и выходим.
 	if !winutil.IsAdmin() {
 		install.LaunchElevated()
@@ -71,7 +71,7 @@ func main() {
 	// Копия в Program Files = эта версия, запуск без UAC настроен. До
 	// wails.Run: если уже работает старый экземпляр, этот сразу выйдет.
 	// Работаем всегда из установленной копии: ей одной можно класть рядом
-	// wintun.dll (TUN) — в её папку без прав администратора не записать.
+	// wintun.dll (TUN) - в её папку без прав администратора не записать.
 	if install.EnsureInstalled() && !paths.RunningInstalled() && len(os.Args) == 1 {
 		if _, err := install.Schtasks("/Run", "/TN", install.TaskOpen); err == nil {
 			applog.Printf("перезапуск из установленной копии")
@@ -119,7 +119,7 @@ func hasArg(a string) bool {
 	return false
 }
 
-// windowBackground — цвет окна до загрузки интерфейса, по выбранной теме,
+// windowBackground - цвет окна до загрузки интерфейса, по выбранной теме,
 // чтобы при старте не мелькал «не тот» фон.
 func windowBackground() *options.RGBA {
 	dark := &options.RGBA{R: 17, G: 18, B: 20, A: 255}
@@ -145,7 +145,7 @@ func windowBackground() *options.RGBA {
 	return dark
 }
 
-// stdLog — стандартный лог Go → журнал Починки. В него пишут библиотеки:
+// stdLog - стандартный лог Go → журнал Починки. В него пишут библиотеки:
 // wintun объясняет здесь, почему не создался адаптер TUN. Без этого
 // сообщения уходили в stderr, которого у оконного приложения нет.
 type stdLog struct{}

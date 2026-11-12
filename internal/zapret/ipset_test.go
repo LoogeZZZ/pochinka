@@ -20,7 +20,7 @@ func TestParseIPSet(t *testing.T) {
 }
 
 // Режимы фильтра: заглушка, пустой файл («все адреса») и возврат к списку
-// из релиза — он сохраняется как .orig при первой правке.
+// из релиза - он сохраняется как .orig при первой правке.
 func TestPrepareIPSet(t *testing.T) {
 	dir := t.TempDir()
 	cur := filepath.Join(dir, "ipset-all.txt")
@@ -34,7 +34,7 @@ func TestPrepareIPSet(t *testing.T) {
 		t.Fatalf("any: %q %v", read(), err)
 	}
 	if _, err := os.Stat(ipsetFile()); err == nil {
-		t.Skip("на машине уже есть скачанный список — режим «по списку» возьмёт его")
+		t.Skip("на машине уже есть скачанный список - режим «по списку» возьмёт его")
 	}
 	if err := prepareIPSet(dir, IPSetList); err != nil || read() != "10.0.0.0/8\n" {
 		t.Fatalf("list: %q %v", read(), err)
@@ -47,7 +47,7 @@ func TestHasEntries(t *testing.T) {
 	}
 }
 
-// LIVE_IPSET=1 — настоящий список из репозитория проходит проверку.
+// LIVE_IPSET=1 - настоящий список из репозитория проходит проверку.
 func TestLiveIPSet(t *testing.T) {
 	if os.Getenv("LIVE_IPSET") == "" {
 		t.Skip("LIVE_IPSET=1")

@@ -1,5 +1,5 @@
 // Темы оформления. «system», «light», «dark» описаны в style.css; готовые
-// темы и своя задаются набором из 8 цветов — линии, подсветка и рамки
+// темы и своя задаются набором из 8 цветов - линии, подсветка и рамки
 // вычисляются из текста, чтобы любая палитра выглядела цельно.
 const THEME_KEYS = ["bg", "surface", "text", "muted", "accent", "on", "bad", "warn"];
 
@@ -25,7 +25,7 @@ const THEMES = {
     accent: "#66d9ef", on: "#a6e22e", bad: "#f92672", warn: "#fd971f" },
 };
 
-// Встроенные светлая и тёмная — как опорные палитры для своей темы.
+// Встроенные светлая и тёмная - как опорные палитры для своей темы.
 const BASE_LIGHT = { scheme: "light", bg: "#f4f5f7", surface: "#ffffff", text: "#0f1115", muted: "#6c717a",
   accent: "#4f46e5", on: "#15983f", bad: "#d42020", warn: "#c26a04" };
 const BASE_DARK = { scheme: "dark", bg: "#111214", surface: "#18191c", text: "#ececee", muted: "#7d828c",
@@ -33,13 +33,13 @@ const BASE_DARK = { scheme: "dark", bg: "#111214", surface: "#18191c", text: "#e
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-// validPalette — только #rrggbb и известные ключи: значения идут в CSS.
+// validPalette - только #rrggbb и известные ключи: значения идут в CSS.
 function validPalette(p) {
   if (!p || (p.scheme !== "light" && p.scheme !== "dark")) return false;
   return THEME_KEYS.every((k) => HEX.test(p[k] || ""));
 }
 
-// themeVars — CSS-переменные палитры, включая производные.
+// themeVars - CSS-переменные палитры, включая производные.
 function themeVars(p) {
   const dark = p.scheme === "dark";
   return {
@@ -51,14 +51,14 @@ function themeVars(p) {
   };
 }
 
-// paletteFor — палитра темы по имени (custom — из сохранённой своей).
+// paletteFor - палитра темы по имени (custom - из сохранённой своей).
 function paletteFor(name, custom) {
   if (THEMES[name]) return THEMES[name];
   if (name === "custom" && validPalette(custom)) return custom;
   return null;
 }
 
-// applyPalette ставит тему на <html>. null — тема из style.css (system/light/dark).
+// applyPalette ставит тему на <html>. null - тема из style.css (system/light/dark).
 function applyPalette(name, p) {
   const root = document.documentElement;
   for (const k of [...THEME_KEYS.map((x) => "--" + x), "--line", "--hover", "--ring"]) root.style.removeProperty(k);
@@ -67,7 +67,7 @@ function applyPalette(name, p) {
     else delete root.dataset.theme;
     return;
   }
-  root.dataset.theme = p.scheme; // color-scheme и подложка — от основы
+  root.dataset.theme = p.scheme; // color-scheme и подложка - от основы
   const vars = themeVars(p);
   for (const k in vars) root.style.setProperty(k, vars[k]);
 }
