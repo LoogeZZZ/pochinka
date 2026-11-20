@@ -17,11 +17,9 @@ const EN = {
   // главная
   "Отключено": "Disconnected",
   "Добро пожаловать!": "Welcome!",
-  "Что нужно починить?": "What needs fixing?",
+  "С чего начнём?": "Where to begin?",
   "Discord, YouTube и игры": "Discord, YouTube and games",
-  "Обход блокировок - заработает сразу, без VPN": "Unblocking - works right away, no VPN needed",
-  "Всё остальное: подписка или ссылки на серверы": "Everything else: a subscription or server links",
-  "Быстрый прокси без VPN": "A fast proxy without VPN",
+  "Всё остальное": "Everything else",
   "Разобраться самостоятельно": "I'll figure it out myself",
   "Подключение": "Connecting",
   "Подключено": "Connected",
