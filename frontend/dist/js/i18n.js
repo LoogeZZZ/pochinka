@@ -22,7 +22,7 @@ const EN = {
   "VPN по подписке": "VPN by subscription",
   "Netflix, Threads и другие интернет-ресурсы": "Netflix, Threads and other internet resources",
   "Сообщения и звонки": "Messages and calls",
-  "Разобраться самостоятельно": "I'll figure it out myself",
+  "Настрою самостоятельно": "I'll set it up myself",
   "Подключение": "Connecting",
   "Подключено": "Connected",
   "Доступна версия {x}": "Version {x} is available",
