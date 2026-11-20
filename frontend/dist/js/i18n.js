@@ -20,7 +20,7 @@ const EN = {
   "С чего начнём?": "Where to begin?",
   "Discord, YouTube и игры": "Discord, YouTube and games",
   "VPN по подписке": "VPN by subscription",
-  "Netflix, Threads и весь остальной интернет": "Netflix, Threads and the rest of the internet",
+  "Netflix, Threads и другие интернет-ресурсы": "Netflix, Threads and other internet resources",
   "Сообщения и звонки": "Messages and calls",
   "Разобраться самостоятельно": "I'll figure it out myself",
   "Подключение": "Connecting",
